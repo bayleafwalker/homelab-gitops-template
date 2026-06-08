@@ -5,7 +5,7 @@
 - System Upgrade Controller plans in `clusters/main/kubernetes/core/system-upgrade-controller-plans` gate Talos rollouts and use `upgrade-settings` for version substitution.
 
 ## GitOps flow
-- Flux controllers are sourced from `clusters/main/kubernetes/repositories/oci/flux-manifests.yaml` (OCI tag v2.7.5) and bootstrapped via manifests in `clusters/main/kubernetes/flux-system/flux`.
+- Flux controllers are sourced from `clusters/main/kubernetes/repositories/oci/flux-manifests.yaml` (OCI tag v2.8.8) and bootstrapped via manifests in `clusters/main/kubernetes/flux-system/flux`.
 - `clusters/main/kubernetes/flux-entry.yaml` reconciles `clusters/main/kubernetes`, applies SOPS decryption with `sops-age`, and injects variables from `cluster-config` and `upgrade-settings`.
 - Source definitions under `clusters/main/kubernetes/repositories/` include the TrueCharts catalog (`clusters/main/kubernetes/repositories/helm/truecharts.yaml` and `clusters/main/kubernetes/repositories/git/truecharts.yaml`) plus upstream feeds for networking, storage and monitoring charts.
 
@@ -22,7 +22,7 @@
 - VolSync enables backup/replication of PVC data.
 
 ## Security and certificates
-- cert-manager plus the TrueCharts `clusterissuer` chart provision ACME issuers using Cloudflare tokens from SOPS-encrypted secrets.
+- cert-manager plus the TrueCharts `clusterissuer` chart provision ACME issuers. This template defaults to Cloudflare DNS-01 via SOPS-encrypted tokens; other DNS providers are possible with provider-specific ClusterIssuer changes.
 - Kubernetes reflector propagates TLS secrets across namespaces; SOPS/age enforces encrypted-at-rest secrets (.sops.yaml rules).
 
 ## Observability and operations
@@ -35,9 +35,8 @@
 
 ## Operator access and MCP options
 - Primary workstation: a TrueCharts code-server instance (`clusters/main/kubernetes/apps/vscode/app/helm-release.yaml`) installs the CLI toolchain into `/tools` for browser-based operations without local installs.
-- Minimal MCP service: manifests live at `clusters/main/kubernetes/apps/mcp-server/app/` with ClusterIP-only exposure, read-only mounts for kubeconfig/talosconfig/age key, and an allowlist-driven config. Replace the placeholder image with your build before deployment.
-- Lightweight option: run a minimal MCP process inside code-server (stdio or loopback HTTP) that exposes read-only health checks (kubectl get/describe, Flux status, Talos node health) using the kubeconfig/talosconfig already mounted in the workspace. Keep it internal and authenticated to the session, not exposed via public routes.
-- Full-service option: if widening scope, follow the standard app pattern and keep access internal with NetworkPolicies. Start with read-only verbs plus explicitly-allowlisted reconcile/reboot actions.
+- Lightweight MCP option: run a minimal MCP process inside code-server (stdio or loopback HTTP) that exposes read-only health checks (kubectl get/describe, Flux status, Talos node health) using the kubeconfig/talosconfig already mounted in the workspace. Keep it internal and authenticated to the session, not exposed via public routes.
+- Full-service option: if you add a dedicated MCP service later, follow the standard app pattern and keep access internal with NetworkPolicies. Start with read-only verbs plus explicitly-allowlisted reconcile/reboot actions.
 - Guardrails: pin CLI versions, validate tool inputs, avoid logging secrets, and prefer ClusterIP + Tailscale/port-forwarding over public route exposure for MCP endpoints.
 
 ## Applications

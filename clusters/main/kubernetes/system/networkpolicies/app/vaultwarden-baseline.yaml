@@ -104,7 +104,7 @@ spec:
           port: 443
     - to:
         - ipBlock:
-            cidr: 172.17.0.1/32
+            cidr: ${KUBERNETES_SERVICE_HOST_CIDR}
       ports:
         - protocol: TCP
           port: 443

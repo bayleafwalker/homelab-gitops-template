@@ -1,96 +1,243 @@
-# Sample only — fill in your own values, then encrypt with sops before
-# committing (`.sops.yaml` already enforces age encryption for this path).
-# This file feeds `${VARIABLE}` substitutions in `talconfig.yaml` when you
-# run `talhelper genconfig` / `clustertool genconfig` to build Talos machine
-# configs. Never commit it in plaintext — it carries node MAC addresses,
-# domain credentials and API tokens alongside the network layout.
-## The Following are required by ClusterTool and CANNOT be removed
-# Ensure VIP is different from all master IPs
+# Sample only — fill in your own values, then encrypt with SOPS before
+# committing (`.sops.yaml` already has an age rule for this file).
+#
+# Purpose:
+# - talhelper/clustertool reads this file when rendering Talos machine configs.
+# - Flux uses matching values from `flux-system/flux/clustersettings.secret.yaml`
+#   and `cluster-secrets.secret.yaml` for Kubernetes manifest substitution.
+#
+# Keep this file and the Flux substitution files in sync. It intentionally
+# includes both non-sensitive defaults and placeholder secrets so newcomers can
+# see the complete required input surface in one place.
+
+###############################################################################
+# 1. Cluster identity and required Talos/clustertool compatibility values
+###############################################################################
+
+# CLUSTERNAME is used by talconfig.yaml and backup paths. Rename from `main`
+# if you want generated configs, backup folders, and local prompts to carry
+# your cluster name.
+CLUSTERNAME: main
+
+# Label used to opt nodes into System Upgrade Controller plans. The same value
+# is rendered into Talos node labels and Flux Plan nodeSelectors.
+UPGRADE_NODE_LABEL: upgrade.example.com/enabled
+
+# Opinionated default NTP server. Replace with your router, internal NTP, or
+# another public source if desired.
+NTP_SERVER: time.cloudflare.com
+
+# Preferred API VIP used by talconfig.yaml. Pick an unused address on the
+# cluster node subnet. It must not be the same as any node IP.
+HOMELAB_API_VIP: 192.168.1.10
+
+# Legacy/clustertool alias. Keep this equal to HOMELAB_API_VIP unless you also
+# update all consumers. Some tooling expects VIP to exist even though the
+# template mostly uses HOMELAB_API_VIP.
 VIP: 192.168.1.10
-## Defines the MasterNode IPs
-## MASTER1IP has to be set
+
+# clustertool compatibility: MASTER1IP is required by some clustertool flows.
+# The sample talconfig currently starts at k8s-control-2, so MASTER1IP is a
+# reserved example value unless you add a k8s-control-1 node. If you do, add a
+# matching node entry in clusters/main/talos/talconfig.yaml with its own
+# MASTER1IP_IP / MASTER1_MAC style variables, or rename the existing sample
+# nodes to a clearer control-1/control-2/control-3 sequence.
 MASTER1IP: 192.168.1.11
+
+###############################################################################
+# 2. Physical node inventory for Talos machine config generation
+###############################################################################
+
+# The template ships with a larger reference topology: three control-plane
+# nodes, two generic workers, and one GPU/Coral worker. For a 1-2 node cluster,
+# trim `clusters/main/talos/talconfig.yaml` and remove unused entries here.
+#
+# Naming note: MASTER2IP_IP is historical and awkward, but it is currently what
+# talconfig.yaml consumes. For new nodes, prefer clearer names such as
+# CONTROL1_IP / CONTROL1_MAC, then update talconfig.yaml to match.
+
+# Control-plane examples used by talconfig.yaml.
 MASTER2IP: 192.168.1.12
 MASTER2IP_IP: 192.168.1.12
 MASTER2IP_CIDR: 192.168.1.12/24
 MASTER2_MAC: "00:11:22:33:44:52"
+
 MASTER3IP: 192.168.1.13
 MASTER3IP_IP: 192.168.1.13
 MASTER3IP_CIDR: 192.168.1.13/24
 MASTER3_MAC: "00:11:22:33:44:53"
+
 MASTER4IP_IP: 192.168.1.14
 MASTER4IP_CIDR: 192.168.1.14/24
 MASTER4_MAC: "00:11:22:33:44:54"
+
+# Worker examples. WORKER4IP/WORKER5IP are not in the default node list; they
+# are provided because optional patch examples reference them and to show how
+# additional worker IPs should be added before extending talconfig.yaml.
+WORKERGPU1IP: 192.168.1.51
 WORKER2IP: 192.168.1.62
 WORKER3IP: 192.168.1.63
-WORKERGPU1IP: 192.168.1.51
-# Defines the gateway for all nodes
+WORKER4IP: 192.168.1.64
+WORKER5IP: 192.168.1.65
+
+###############################################################################
+# 3. Network plan
+###############################################################################
+
+# Recommended: use a dedicated subnet/VLAN for cluster nodes if your router and
+# switch support it. That keeps Talos nodes, LoadBalancer IPs, storage access,
+# and firewall policy isolated from general client devices. A flat LAN works
+# for small labs, but reserve all node/VIP/LB addresses outside DHCP.
+#
+# Historical name: VLAN20_* means "cluster node subnet" in this template. You
+# can use VLAN 20, another VLAN, or no VLAN; keep the variable names unless you
+# update every consumer.
+LAN_CIDR: 192.168.1.0/24
 GATEWAY: 192.168.1.1
 VLAN20_GATEWAY: 192.168.1.1
 VLAN20_CIDR: 192.168.1.0/24
-# Defines the ip range metallb is allowed to use
-METALLB_RANGE: 192.168.1.200-192.168.1.220
-# IP Blocky DNS will be exposed on
-BLOCKY_IP: 192.168.1.205
-OMADA_IP: 192.168.1.206
-## Configures Traefik, ClusterIssuer and Blocky for said domain, using these credentials
-# domain is the base/highest level of your domain, so without subdomain, example: truecharts.org, not somesite.truecharts.org
-# To disable, please see the comments in their respective helm-values.yaml files!
-# When disabled, please use placeholder values instead.
-DOMAIN_0: apps.example.com
-DOMAIN_0_EMAIL: you@example.com
-DOMAIN_0_CLOUDFLARE_TOKEN: REPLACE_WITH_CLOUDFLARE_API_TOKEN
-TAILSCALE_AUTHKEY: REPLACE_WITH_TAILSCALE_AUTH_KEY
-# Used to automatically generate a sshkey-pair for FluxCD
-# Has to start with ssh://
-# Please make sure to NOT contain any special characters in the URL except "-"
-GITHUB_REPOSITORY: git@github.com:your-username/your-homelab-repo.git
-AK_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
-LLDAP_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
-LDAP_OUTPOST_TOKEN: REPLACE_WITH_AUTHENTIK_OUTPOST_TOKEN
-CODE_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
-COUCHDB_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
-DC_0: example
-DC_1: com
-DN: dc=example, dc=com
-NORDVPN_USER: REPLACE_WITH_VPN_USERNAME
-NORDVPN_PASSWORD: REPLACE_WITH_VPN_PASSWORD
-# or your preferred country
-NORDVPN_COUNTRY: Switzerland
-# or your preferred server
-NORDVPN_SERVER: ch000.nordvpn.com
-NORDVPN_WIREGUARD_PRIVATE_KEY: REPLACE_WITH_WIREGUARD_PRIVATE_KEY
-NORDVPN_WIREGUARD_PUBLIC_KEY: REPLACE_WITH_WIREGUARD_PUBLIC_KEY
-HETZNER_ACCESS_KEY: REPLACE_WITH_HETZNER_ACCESS_KEY
-HETZNER_SECRET_KEY: REPLACE_WITH_HETZNER_SECRET_KEY
-HETZNER_S3_BUCKET_NAME: your-bucket-name
-HETZNER_S3_BUCKET_ENDPOINT: hel1.your-objectstorage.com
-HETZNER_API_TOKEN: REPLACE_WITH_HETZNER_API_TOKEN
-DISCORD_SEVEN_WEBHOOK_URL: https://discord.com/api/webhooks/REPLACE_WITH_WEBHOOK_ID/REPLACE_WITH_WEBHOOK_TOKEN
-MOSQUITTO_USERNAME: homelab_mosquitto
-MOSQUITTO_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
-HOMEASSISTANT_URL: homeassistant.example.com
-HOMEASSISTANT_USERNAME: bot
-HOMEASSISTANT_TOKEN: REPLACE_WITH_HOMEASSISTANT_LONG_LIVED_TOKEN
-## Uncomment and adapt to automatically setup your dockerhub credentials
-## This should prevent much of the potential ratelimits
-# DOCKERHUB_USER: dockerhub-username
-# DOCKERHUB_PASSWORD: dockerhub-password
-## DO NOT ALTER
+
+# Pod/service networks are internal to Kubernetes. Avoid overlap with LAN,
+# VPN, Docker, and site-to-site networks.
 PODNET: 172.16.0.0/16
 SVCNET: 172.17.0.0/16
-TRUENAS_IP: 192.168.1.33
-DOMAIN_HOST: example.com
-GATEWAY_INTERNAL_IP: 192.168.1.219
-SHELL_IP: 192.168.1.217
-REGISTRY_IP: 192.168.1.221
-FORGEJO_SSH_IP: 192.168.1.218
-LDAP_OUTPOST_IP: 192.168.1.216
-POSTGRES_LB_IP: 192.168.1.220
-LAN_CIDR: 192.168.1.0/24
-HOMELAB_API_VIP: 192.168.1.10
+KUBERNETES_SERVICE_HOST_IP: 172.17.0.1
+KUBERNETES_SERVICE_HOST_CIDR: 172.17.0.1/32
+
+# Optional trusted VPN/site-to-site network allowed into selected internal
+# services. Remove the matching policy entries if you do not have a VPN.
+TRUSTED_VPN_CIDR: 10.0.0.0/24
+
+# LoadBalancer pool advertised on the cluster subnet. Keep this range outside
+# DHCP and outside node IPs. HOMELAB_* names are the active variables used by
+# Cilium/MetalLB resources; METALLB_RANGE is kept as a compatibility alias for
+# older docs/manifests.
 HOMELAB_METALLB_RANGE: 192.168.1.200-192.168.1.220
 HOMELAB_LB_START: 192.168.1.200
 HOMELAB_LB_STOP: 192.168.1.220
-## Headlamp IP has to be set
-HEADLAMP_IP: 192.168.1.215
+METALLB_RANGE: 192.168.1.200-192.168.1.220
+
+# Fixed service IPs from the LoadBalancer range. Adjust or delete services you
+# do not plan to run before first bootstrap.
+GATEWAY_INTERNAL_IP: 192.168.1.219   # Cilium Gateway API HTTPS entrypoint.
+POSTGRES_LB_IP: 192.168.1.220       # Optional external PostgreSQL LB example.
+REGISTRY_IP: 192.168.1.221          # Optional registry mirror; must be in your real pool if enabled.
+REGISTRY_HOST: registry.apps.example.com
+REGISTRY_SERVICE_ENDPOINT: docker-registry.registry.svc.cluster.local:5000
+FORGEJO_SSH_IP: 192.168.1.218       # Optional Forgejo SSH LoadBalancer.
+SHELL_IP: 192.168.1.217             # Optional browser shell/code workspace helper.
+LDAP_OUTPOST_IP: 192.168.1.216      # Optional Authentik LDAP outpost.
+HEADLAMP_IP: 192.168.1.215          # Optional Headlamp fixed IP.
+BLOCKY_IP: 192.168.1.205            # Optional DNS sinkhole/cluster DNS frontend.
+OMADA_IP: 192.168.1.206             # Optional Omada controller LoadBalancer.
+
+# Optional directory backend CIDR used by Authentik's example egress policy.
+# If you do not integrate an external LDAP/directory backend, remove or disable
+# that NetworkPolicy before bootstrap.
+AUTHENTIK_DIRECTORY_BACKEND_CIDR: 192.168.1.59/32
+
+###############################################################################
+# 4. Domains, DNS, and certificates
+###############################################################################
+
+# DOMAIN_0 is the app zone used for HTTPRoute hosts, wildcard certificates, and
+# Blocky/k8s_gateway. DOMAIN_HOST is a base/local infra zone used for names such
+# as truenas.${DOMAIN_HOST} and opnsense.${DOMAIN_HOST}.
+DOMAIN_0: apps.example.com
+DOMAIN_HOST: example.com
+DOMAIN_0_EMAIL: you@example.com
+
+# Opinionated default: the bundled ClusterIssuer uses Cloudflare DNS-01. If you
+# use Route53, Hetzner DNS, RFC2136, or another provider, replace the
+# clusterissuer chart values/manifests and rename this variable to match your
+# provider-specific secret.
+DOMAIN_0_CLOUDFLARE_TOKEN: REPLACE_WITH_CLOUDFLARE_API_TOKEN
+
+# LDAP/domain components used by Authentik/LDAP examples.
+DC_0: example
+DC_1: com
+DN: dc=example, dc=com
+
+# Used by Flux GitRepository/deploy-key examples.
+GITHUB_REPOSITORY: git@github.com:your-username/your-homelab-repo.git
+
+###############################################################################
+# 5. Storage and backups
+###############################################################################
+
+# Optional NFS/RWX storage. TrueNAS is the opinionated example, but any stable
+# NFS server can be used if you update PVCs and docs accordingly.
+TRUENAS_IP: 192.168.1.33
+
+# Opinionated S3-compatible object storage defaults. Many manifests still use
+# the historical HETZNER_* names because the source repo used Hetzner Object
+# Storage. They work with any S3-compatible provider if endpoint/bucket/keys are
+# changed consistently.
+HETZNER_S3_BUCKET_NAME: your-bucket-name
+HETZNER_S3_BUCKET_ENDPOINT: hel1.your-objectstorage.com
+HETZNER_ACCESS_KEY: REPLACE_WITH_HETZNER_ACCESS_KEY
+HETZNER_SECRET_KEY: REPLACE_WITH_HETZNER_SECRET_KEY
+HETZNER_API_TOKEN: REPLACE_WITH_HETZNER_API_TOKEN
+
+# Generic S3 variables used by the custom-app-postgres example. Prefer these
+# names for new services instead of adding more provider-specific variables.
+S3_BACKUP_BUCKET: your-backup-bucket-name
+S3_BACKUP_ENDPOINT: s3.your-objectstorage.com
+S3_ACCESS_KEY: REPLACE_WITH_S3_ACCESS_KEY
+S3_SECRET_KEY: REPLACE_WITH_S3_SECRET_KEY
+
+###############################################################################
+# 6. Core platform and app credentials
+###############################################################################
+
+AK_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+LLDAP_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+LDAP_OUTPOST_TOKEN: REPLACE_WITH_AUTHENTIK_OUTPOST_TOKEN
+AUTHENTIK_CERT_SYNC_TOKEN: REPLACE_WITH_AUTHENTIK_API_TOKEN
+CODE_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+COUCHDB_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+NEXTCLOUD_USERNAME: admin
+NEXTCLOUD_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+NEXTCLOUD_CNPG_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+PAPERLESS_CNPG_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+VAULTWARDEN_ADMIN_TOKEN: REPLACE_WITH_RANDOM_TOKEN
+VOLSYNC_RESTIC_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+
+###############################################################################
+# 7. Optional integrations
+###############################################################################
+
+# Tailscale: useful for private admin access to the cluster without exposing
+# management UIs publicly.
+TAILSCALE_AUTHKEY: REPLACE_WITH_TAILSCALE_AUTH_KEY
+
+# VPN examples. Keep only if you deploy workloads that need egress through a
+# commercial VPN provider.
+NORDVPN_USER: REPLACE_WITH_VPN_USERNAME
+NORDVPN_PASSWORD: REPLACE_WITH_VPN_PASSWORD
+NORDVPN_COUNTRY: Switzerland
+NORDVPN_SERVER: ch000.nordvpn.com
+NORDVPN_WIREGUARD_PRIVATE_KEY: REPLACE_WITH_WIREGUARD_PRIVATE_KEY
+NORDVPN_WIREGUARD_PUBLIC_KEY: REPLACE_WITH_WIREGUARD_PUBLIC_KEY
+PROTONVPN_WIREGUARD_PRIVATE_KEY: REPLACE_WITH_WIREGUARD_PRIVATE_KEY
+PROTONVPN_WIREGUARD_PUBLIC_KEY: REPLACE_WITH_WIREGUARD_PUBLIC_KEY
+
+# Notifications and home automation examples.
+DISCORD_SEVEN_WEBHOOK_URL: https://discord.com/api/webhooks/REPLACE_WITH_WEBHOOK_ID/REPLACE_WITH_WEBHOOK_TOKEN
+HOMEASSISTANT_URL: homeassistant.example.com
+HOMEASSISTANT_USERNAME: bot
+HOMEASSISTANT_TOKEN: REPLACE_WITH_HOMEASSISTANT_LONG_LIVED_TOKEN
+
+# Mosquitto is useful for Home Assistant/IoT MQTT. Remove or leave placeholders
+# if you do not deploy network/mosquitto.
+MOSQUITTO_USERNAME: homelab_mosquitto
+MOSQUITTO_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+
+# GitHub Actions Runner Controller example. Required only if you keep
+# system/github-actions-runner.
+GITHUB_APP_ID: "REPLACE_WITH_GITHUB_APP_ID"
+GITHUB_APP_INSTALLATION_ID: "REPLACE_WITH_GITHUB_APP_INSTALLATION_ID"
+
+# Uncomment if you need authenticated Docker Hub pulls to avoid rate limits.
+# DOCKERHUB_USER: dockerhub-username
+# DOCKERHUB_PASSWORD: dockerhub-password

@@ -20,7 +20,7 @@ spec:
       - key: feature.node.kubernetes.io/system-os_release.ID
         operator: In
         values: ["talos"]
-      - key: upgrade.homelab.dev/enabled
+      - key: ${UPGRADE_NODE_LABEL}
         operator: In
         values: ["true"]
       - key: node-role.kubernetes.io/control-plane

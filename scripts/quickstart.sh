@@ -50,9 +50,9 @@ if [[ -f age.agekey ]]; then
   ok "age.agekey present (kept out of git via .gitignore)"
 else
   warn "age.agekey not found — generate one and update .sops.yaml + the sops-age secret:"
-  warn "  age-keygen -o age.agekey"
-  warn "  Put the PUBLIC key in .sops.yaml (replacing the REPLACE_WITH_* placeholder)"
-  warn "  Put the PRIVATE key in clusters/main/kubernetes/flux-system/flux/sopssecret.secret.yaml"
+  warn "  ./scripts/setup-encryption.sh"
+  warn "  Put the PUBLIC key in .sops.yaml (the script can do this)"
+  warn "  Create the in-cluster sops-age Secret out-of-band during bootstrap"
 fi
 
 step "4. Placeholder values still to replace"
@@ -62,12 +62,14 @@ placeholder_patterns=(
   'example\.com'
   'your-username'
   'your-homelab-repo'
+  'your-bucket-name'
+  'your-objectstorage\.com'
   '00:11:22:33:44:5'
   'age1REPLACE_WITH_YOUR_OWN_AGE_PUBLIC_KEY'
 )
 hits=0
 for pattern in "${placeholder_patterns[@]}"; do
-  matches=$(grep -rIl --exclude-dir=.git --exclude-dir=docs --exclude='quickstart.sh' -E "${pattern}" . 2>/dev/null | sort -u || true)
+  matches=$(grep -rIl --exclude-dir=.git --exclude-dir=docs --exclude-dir=scripts --exclude='sopssecret.secret.yaml' -E "${pattern}" . 2>/dev/null | sort -u || true)
   if [[ -n "${matches}" ]]; then
     count=$(echo "${matches}" | wc -l)
     warn "pattern '${pattern}' still found in ${count} file(s):"
@@ -105,6 +107,17 @@ if command -v kustomize >/dev/null 2>&1; then
   fi
 else
   warn "kustomize not on PATH — run 'mise install' / 'direnv allow' first"
+fi
+
+step "7. Deeper repository checks"
+if [[ -x ./scripts/check-repo.sh ]]; then
+  if ./scripts/check-repo.sh >/tmp/quickstart-check-repo.log 2>&1; then
+    ok "scripts/check-repo.sh passes"
+  else
+    warn "scripts/check-repo.sh found additional items — see /tmp/quickstart-check-repo.log"
+  fi
+else
+  warn "scripts/check-repo.sh not found or not executable"
 fi
 
 step "Summary"

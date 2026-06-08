@@ -6,7 +6,7 @@
 - Helm charts: `spec.chart.spec.version` in each HelmRelease under `clusters/main/kubernetes/**/app/helm-release.yaml`.
 
 ## Upgrade workflow
-- Talos/Kubernetes: align `talconfig.yaml` and `upgradesettings.yaml`, regenerate machine configs, commit, then enable upgrades by labeling the target nodes (`upgrade.homelab.dev/enabled=true`) and reconcile plans with `flux reconcile kustomization system-upgrade-controller-plans`.
+- Talos/Kubernetes: align `talconfig.yaml` and `upgradesettings.yaml`, regenerate machine configs, commit, then enable upgrades by labeling the target nodes (`${UPGRADE_NODE_LABEL}=true`, for example `upgrade.example.com/enabled=true`) and reconcile plans with `flux reconcile kustomization system-upgrade-controller-plans`.
 - Flux: bump the OCI tag in `flux-manifests.yaml`, commit, and reconcile `flux` + `flux-entry`.
 - Charts/apps: update chart versions, commit, and reconcile the affected Kustomization; watch `flux logs` for drift warnings.
 - Only commit encrypted secrets; rotate Age keys and deploy keys when rotating Git credentials.

@@ -55,6 +55,13 @@ All Helm charts are sourced from repositories defined in `clusters/main/kubernet
 - **TrueCharts** (primary): `clusters/main/kubernetes/repositories/helm/truecharts.yaml` (OCI) and `clusters/main/kubernetes/repositories/git/truecharts.yaml`
 - **Upstream charts**: Individual repositories in `clusters/main/kubernetes/repositories/helm/` (cilium, metallb, prometheus-community, etc.)
 
+For a template repository, treat TrueCharts as an external dependency rather
+than part of this repo. Prefer upstream project charts or locally-owned
+manifests for services where long-term supportability is more important than
+matching TrueCharts common values. When a service stays on TrueCharts, pin the
+chart version, keep values close to documented chart behavior, and test
+backup/restore before changing chart sources.
+
 ### 2. Kustomization Hierarchy
 
 ```
@@ -126,7 +133,8 @@ Flux performs variable substitution from two ConfigMaps:
 Variables use `${VARIABLE_NAME}` syntax:
 - `${DOMAIN_0}` - Primary domain
 - `${GATEWAY_INTERNAL_IP}` - Internal Gateway API load balancer IP
-- `${METALLB_RANGE}` - MetalLB address pool
+- `${HOMELAB_METALLB_RANGE}` - main MetalLB/Cilium LoadBalancer address pool
+- `${METALLB_RANGE}` - legacy compatibility alias for older MetalLB examples
 - `${TALOS_VERSION}` - Current Talos version
 - `${KUBERNETES_VERSION}` - Current Kubernetes version
 
@@ -390,15 +398,15 @@ Versions must be synchronized in two places:
 
 1. **Machine config generation**: `clusters/main/talos/talconfig.yaml`
    ```yaml
-   talosVersion: v1.11.6
-   kubernetesVersion: v1.33.7
+   talosVersion: v1.13.3
+   kubernetesVersion: v1.36.1
    ```
 
 2. **Upgrade orchestration**: `clusters/main/kubernetes/flux-system/flux/upgradesettings.yaml`
    ```yaml
    data:
-     TALOS_VERSION: v1.11.6
-     KUBERNETES_VERSION: v1.33.7
+     TALOS_VERSION: v1.13.3
+     KUBERNETES_VERSION: v1.36.1
    ```
 
 System Upgrade Controller plans in `core/system-upgrade-controller-plans/` consume these variables to orchestrate rolling upgrades.
@@ -411,7 +419,7 @@ Flux version is controlled by the OCI manifest tag in `clusters/main/kubernetes/
 spec:
   url: oci://ghcr.io/fluxcd/flux-manifests
   ref:
-    tag: v2.7.5
+    tag: v2.8.8
 ```
 
 ## References
@@ -420,5 +428,7 @@ spec:
 - Operations guide: `docs/operations.md`
 - Version tracking: `docs/releases.md`
 - Secrets guide: `docs/secrets.md`
+- Template publishing assessment: `docs/template-publishing.md`
 - Flux documentation: https://fluxcd.io/docs/
-- TrueCharts catalog: https://truecharts.org/
+- TrueCharts catalog/docs: https://truecharts.org/
+- TrueCharts ClusterTool getting started: https://truecharts.org/clustertool/getting-started/

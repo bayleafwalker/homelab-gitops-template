@@ -4,7 +4,7 @@
 
 ## Tech Stack
 
-Primary: YAML/Kustomize (Kubernetes GitOps). Flux v2.8.5 for GitOps reconciliation. Talos v1.12.6 OS, Kubernetes v1.35.3. SOPS + age for secret encryption. Validation via `mise run validate` or `kustomize build`.
+Primary: YAML/Kustomize (Kubernetes GitOps). Flux v2.8.8 for GitOps reconciliation. Talos v1.13.3 OS, Kubernetes v1.36.1. SOPS + age for secret encryption. Validation via `mise run validate`, `kustomize build`, and `./scripts/check-repo.sh`.
 
 ## Environment setup
 
@@ -34,7 +34,7 @@ Once bootstrapped, this cluster reconciles continuously via Flux — changes to 
 
 ## Development workflow
 
-- Validate changes with `mise run validate` before committing.
+- Validate changes with `mise run validate` and `./scripts/check-repo.sh` before committing.
 - Never commit invalid YAML — validate first.
 - After committing, reconcile: `flux reconcile source git cluster && flux reconcile kustomization flux-entry`.
 - Check status: `flux get ks -A`, `flux get hr -A`.
@@ -46,12 +46,13 @@ Once bootstrapped, this cluster reconciles continuously via Flux — changes to 
 If reconciliation fails after a change, diagnose the root cause (check `flux logs`, `kubectl describe`), fix, and re-push — up to **5 cycles** — before escalating. Only escalate if still failing after 5 attempts or if a design decision is required.
 
 ## Entrypoint
-1. **Start here**: Read `README.md` and `docs/architecture.md` first — they cover cluster layout, tooling, and pinned versions.
-2. **Service deployment**: Review `docs/service-deployment-guide.md` for comprehensive deployment patterns and operational workflows.
-3. **Scope**: Keep changes to `clusters/main/**` and `docs/**` unless explicitly requested otherwise.
+1. **Start here**: Read `README.md` and `docs/onboarding.md` first — they cover the human first-run path, required inputs, helper scripts, and pinned versions.
+2. **Architecture**: Read `docs/architecture.md` before changing cluster structure.
+3. **Service deployment**: Review `docs/service-deployment-guide.md` for comprehensive deployment patterns and operational workflows.
+4. **Scope**: Keep changes to `clusters/main/**`, `docs/**`, and onboarding helper scripts unless explicitly requested otherwise.
 
 ## Mission
-- GitOps repository for a Talos (v1.12.6) / Kubernetes (v1.35.3) cluster managed by Flux (v2.8.5) with TrueCharts and upstream Helm sources.
+- GitOps repository for a Talos (v1.13.3) / Kubernetes (v1.36.1) cluster managed by Flux (v2.8.8) with TrueCharts and upstream Helm sources.
 - `clusters/main/kubernetes/flux-entry.yaml` is the root Kustomization that reconciles cluster state with SOPS decryption and variable substitution from `cluster-config` and `upgrade-settings` ConfigMaps.
 - All services follow a consistent pattern: `<category>/<service>/ks.yaml` → `<category>/<service>/app/` containing HelmRelease + supporting resources.
 
@@ -59,10 +60,10 @@ If reconciliation fails after a change, diagnose the root cause (check `flux log
 
 Services are organized into functional categories:
 
-- **apps/**: User applications (authentik, kubernetes-dashboard)
-- **core/**: Essential platform services (traefik, blocky, clusterissuer, metallb-config)
+- **apps/**: User applications (authentik, headlamp, homepage, vaultwarden, nextcloud, paperless, forgejo, custom examples)
+- **core/**: Essential platform services (blocky, clusterissuer, metallb-config)
 - **system/**: Infrastructure components (cert-manager, longhorn, openebs, kube-prometheus-stack, volsync)
-- **network/**: Network services (nginx-internal/external, omada-controller)
+- **network/**: Network services (gateway-api, tailscale, mosquitto, omada-controller)
 - **kube-system/**: Kubernetes core (cilium, metrics-server, node-feature-discovery)
 
 Each service follows the structure:
@@ -83,6 +84,7 @@ Each service follows the structure:
 - Never decrypt or commit plaintext secrets; Age key is in `.sopsrc`/`age.agekey`.
 - Encrypted files use `.secret.yaml` suffix.
 - Flux automatically decrypts using the `sops-age` secret in flux-system namespace.
+- Template placeholder `*.secret.yaml` files may start unencrypted for onboarding; after inserting real values, encrypt them with `./scripts/sops-files.sh encrypt` before committing.
 
 ### Service Deployment
 - Add new services under the appropriate category (`apps`, `core`, `system`, `network`, `media`).
@@ -94,8 +96,9 @@ Each service follows the structure:
 
 ### Variable Substitution
 - Use `${VARIABLE_NAME}` syntax for substitution (e.g., `${DOMAIN_0}`, `${TRAEFIK_IP}`).
-- Variables come from two ConfigMaps:
+- Variables come from the Flux substitution sources:
   - `cluster-config`: Domains, IPs, network ranges
+  - `cluster-secrets`: Sensitive values
   - `upgrade-settings`: Talos and Kubernetes versions
 
 ### Version Management

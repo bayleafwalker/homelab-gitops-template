@@ -6,7 +6,7 @@ This repo upgrades Talos and Kubernetes via:
 
 The SUC Plans are already configured to be safe-by-default:
 - `spec.concurrency: 1` and `spec.exclusive: true` (one node at a time).
-- Gate upgrades behind the node label `upgrade.homelab.dev/enabled=true`.
+- Gate upgrades behind the node label `${UPGRADE_NODE_LABEL}=true` (sample value: `upgrade.example.com/enabled=true`).
 
 ## What changes for a version bump
 
@@ -48,7 +48,7 @@ If you want a strict order, only enable one node at a time.
 
 Enable upgrades on exactly one node:
 ```bash
-direnv exec . kubectl label node <node> upgrade.homelab.dev/enabled=true --overwrite
+direnv exec . kubectl label node <node> upgrade.example.com/enabled=true --overwrite
 ```
 
 Confirm the Talos plan resolved the desired version:

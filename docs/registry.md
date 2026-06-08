@@ -8,9 +8,9 @@ Background
 Long-term recommendations
 - Ensure your nodes can reach the registry LoadBalancer IP/port.
 	- In this repo, the in-cluster registry exposes a dedicated LoadBalancer endpoint at `${REGISTRY_IP}:5000` via `registry/docker-registry-lb`.
-	- If you migrate the registry to a new IP/VLAN, you can keep both the new `${REGISTRY_IP}:5000` mirror and the previous endpoint (e.g. `192.168.1.21:5000`) configured side-by-side for rollback compatibility until the migration is verified.
+	- If you migrate the registry to a new IP/VLAN, keep `REGISTRY_IP`, `REGISTRY_HOST`, and `REGISTRY_SERVICE_ENDPOINT` aligned in `clusterenv.yaml`, `clustersettings.secret.yaml`, the registry Service, and the Talos registry patch.
 	- If you see kubelet/containerd errors like `http: server gave HTTP response to HTTPS client`, the node runtime is still trying HTTPS and needs an insecure-registry configuration.
-- Prefer the LoadBalancer endpoint for kubelet pulls (containerd does not support Authentik forward-auth at the HTTP route host `registry.example.com`).
+- Prefer the LoadBalancer endpoint for kubelet pulls (containerd does not support Authentik forward-auth at the HTTP route host `${REGISTRY_HOST}`).
 	- Use authenticated registries and `imagePullSecrets` where appropriate.
 
 Node runtime / TLS guidance
@@ -31,13 +31,13 @@ Apply on Talos (typical workflow)
 # 1) Generate machine configs (use your existing generation workflow/tooling)
 #    See docs/operations.md for the canonical steps.
 
-# 2) Apply to each node (example — adjust node IPs)
-talosctl --talosconfig clusters/talosconfig apply-config --insecure --nodes 192.168.1.11 --file clusters/main/talos/generated/main-k8s-control-1.yaml
-talosctl --talosconfig clusters/talosconfig apply-config --insecure --nodes 192.168.1.12 --file clusters/main/talos/generated/main-k8s-worker-1.yaml
+# 2) Apply to each node (examples — adjust node IPs and generated filenames)
+talosctl --talosconfig clusters/.talos/config apply-config --insecure --nodes ${MASTER2IP} --file clusters/main/talos/generated/main-k8s-control-2.yaml
+talosctl --talosconfig clusters/.talos/config apply-config --insecure --nodes ${WORKER2IP} --file clusters/main/talos/generated/main-k8s-worker-2.yaml
 
 # 3) Restart kubelet/containerd by rebooting the node if needed
-talosctl --talosconfig clusters/talosconfig reboot --nodes 192.168.1.11
-talosctl --talosconfig clusters/talosconfig reboot --nodes 192.168.1.12
+talosctl --talosconfig clusters/.talos/config reboot --nodes ${MASTER2IP}
+talosctl --talosconfig clusters/.talos/config reboot --nodes ${WORKER2IP}
 ```
 
 Containerd example (non-Talos reference)
@@ -50,7 +50,7 @@ Containerd example (non-Talos reference)
 		endpoint = ["http://${REGISTRY_IP}:5000"]
 ```
 
-	- On Talos-managed nodes update the Talos config (see `clusters/main/talos/talconfig.json`) or follow your distribution's containerd configuration method; then restart containerd/kubelet.
+	- On Talos-managed nodes update `clusters/main/talos/talconfig.yaml` and `clusters/main/talos/patches/registry.yaml`, regenerate machine configs, then restart containerd/kubelet.
 
 Notes on temporary workarounds
 - Patching `Deployment` pod templates to schedule on a node that can reach the registry or adding pod-level NetworkPolicies are workarounds only. The real fix is to make nodes able to pull images reliably (TLS or runtime config).

@@ -6,7 +6,7 @@ See AGENTS.md for all project instructions, conventions, and operational workflo
 
 ## Tech Stack
 
-Primary language: YAML/Kustomize (Kubernetes GitOps). Flux v2.8.5 for reconciliation. Talos v1.12.6 OS, Kubernetes v1.35.3. SOPS + age for secrets. No application test framework — validation via `mise run validate` or `kustomize build`.
+Primary language: YAML/Kustomize (Kubernetes GitOps). Flux v2.8.8 for reconciliation. Talos v1.13.3 OS, Kubernetes v1.36.1. SOPS + age for secrets. No application test framework — validation via `mise run validate`, `kustomize build`, or `./scripts/check-repo.sh`.
 
 ---
 
@@ -44,7 +44,7 @@ Once bootstrapped, this cluster reconciles continuously via Flux — all changes
 
 ## Development Workflow
 
-1. Validate changes with `mise run validate` before committing.
+1. Validate changes with `mise run validate` and `./scripts/check-repo.sh` before committing.
 2. **Never commit invalid YAML** — validate first.
 3. After committing, reconcile: `flux reconcile source git cluster && flux reconcile kustomization flux-entry`.
 4. Check status: `flux get ks -A`, `flux get hr -A`.

@@ -43,7 +43,7 @@ spec:
             - port: "7946"
               protocol: UDP
     - toCIDRSet:
-        - cidr: 172.17.0.1/32
+        - cidr: ${KUBERNETES_SERVICE_HOST_CIDR}
       toPorts:
         - ports:
             - port: "443"

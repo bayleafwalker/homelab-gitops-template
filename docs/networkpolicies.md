@@ -10,7 +10,7 @@ This repo is moving toward “default-deny per namespace” with explicit allows
 Many controllers/operators (CNPG, VolSync, cert-manager, etc.) must talk to the Kubernetes API.
 
 In this cluster, the API can be reached via:
-- The Service `kubernetes.default` (ClusterIP `172.17.0.1:443`)
+- The Service `kubernetes.default` (ClusterIP `${KUBERNETES_SERVICE_HOST_IP}:443`)
 - The control-plane node IP on `:6443`
 
 ### Prefer selector-based allows where possible

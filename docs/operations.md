@@ -29,7 +29,6 @@ Some services are intentionally not reconciled from top-level category kustomiza
 - `system/traefik-crds`
 - `network/nginx-internal`
 - `network/nginx-external`
-- `network/mosquitto`
 
 Operational stance:
 - Treat absence as "disabled by choice" unless a change request says otherwise.
@@ -268,5 +267,5 @@ flux get alerts -n flux-system
 
 ## Talos and cluster maintenance
 - Generate machine configs from `talconfig.yaml` and apply with `talosctl apply --insecure` followed by `talosctl bootstrap` (initial) or `talosctl upgrade` (if needed).
-- System Upgrade Controller plans in `core/system-upgrade-controller-plans` consume `upgrade-settings` to roll Talos/Kubernetes updates once versions are bumped; they only act on nodes labeled `upgrade.homelab.dev/enabled=true`.
+- System Upgrade Controller plans in `core/system-upgrade-controller-plans` consume `upgrade-settings` to roll Talos/Kubernetes updates once versions are bumped; they only act on nodes labeled with `${UPGRADE_NODE_LABEL}=true`.
 - Use `flux reconcile kustomization system-upgrade-controller-plans` to push plan changes promptly.

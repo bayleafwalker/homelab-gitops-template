@@ -62,6 +62,18 @@ run = "kustomize build clusters/main/kubernetes >/dev/null"
 description = "Run local homelab validation."
 depends = ["kustomize"]
 
+[tasks.check-repo]
+description = "Run deeper local template consistency checks."
+run = "./scripts/check-repo.sh"
+
+[tasks.quickstart]
+description = "Run the first-time setup readiness checker."
+run = "./scripts/quickstart.sh"
+
+[tasks.configure-starter]
+description = "Show starter configuration script options."
+run = "./scripts/configure-starter.sh --help"
+
 [tasks.preflight]
 description = "Run validation and confirm live-cluster context."
 depends = ["validate", "context"]

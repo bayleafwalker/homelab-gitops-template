@@ -2,4 +2,4 @@ machine:
   time:
     disabled: false
     servers:
-      - time.cloudflare.com
+      - ${NTP_SERVER}

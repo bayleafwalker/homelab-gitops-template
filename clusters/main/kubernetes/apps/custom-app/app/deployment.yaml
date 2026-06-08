@@ -2,9 +2,8 @@
 #
 # Replace `your-app` with your image name and push builds to the registry
 # documented in docs/registry.md (`${REGISTRY_IP}:5000/your-app:<tag>`).
-# This is the same pattern used to run custom services such as
-# https://github.com/bayleafwalker/actionq and https://github.com/bayleafwalker/sprintctl
-# in the cluster this template was derived from.
+# This is the same pattern you can use for small custom services that should be
+# built privately and pulled by the cluster from its internal registry.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -11,7 +11,7 @@ spec:
   loadBalancerSourceRanges:
     - ${LAN_CIDR}
     - ${VLAN20_CIDR}
-    - 10.0.0.0/24
+    - ${TRUSTED_VPN_CIDR}
   selector:
     app: authentik-ldap-outpost
   ports:

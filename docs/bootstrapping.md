@@ -25,6 +25,11 @@ Either way, note down: the static IP(s) you'll assign, the MAC address(es) of
 the NIC(s) Talos should configure, your LAN gateway/CIDR, and a free VIP for
 the Kubernetes API endpoint (must differ from every node IP).
 
+If your network supports it, put the cluster on its own subnet or VLAN and keep
+node IPs, the API VIP, and LoadBalancer addresses outside DHCP. A flat LAN works
+for a starter lab, but a dedicated cluster subnet makes firewalling, DNS, and
+storage access cleaner later.
+
 ## 1. Install tooling and load the environment
 
 ```bash
@@ -76,6 +81,10 @@ own values (run `./scripts/quickstart.sh` to find what's left):
 | `your-username/your-homelab-repo` | your Git hosting path |
 | `REPLACE_WITH_*` | freshly generated random secrets/tokens (see inline comments per file for how to generate each one) |
 
+The bundled certificate path is opinionated around Cloudflare DNS-01. If your
+DNS zone is elsewhere, plan to replace the ClusterIssuer provider values before
+first reconcile.
+
 Key files to edit:
 
 - **`clusters/main/clusterenv.yaml`** — node IPs/MACs, VIP, gateway/CIDR,
@@ -91,6 +100,9 @@ Key files to edit:
   the matching `${VARIABLE}` entries from `clusterenv.yaml` for any nodes you
   delete, and delete unused per-node patches under `clusters/main/talos/patches/`
   (e.g. `worker3-nodeip.yaml`, `worker-gpu1-*.yaml` if you have no GPU node).
+  `MASTER1IP` exists for clustertool compatibility even though the sample node
+  list starts at `k8s-control-2`; either add a `k8s-control-1` entry or rename
+  the sample nodes to your preferred sequence.
 - **`clusters/main/kubernetes/flux-system/flux/clustersettings.secret.yaml`**
   and **`cluster-secrets.secret.yaml`** — non-sensitive and sensitive
   cluster-wide values consumed by Flux's variable substitution. Both ship with
@@ -101,8 +113,9 @@ Key files to edit:
   `known_hosts` with `ssh-keyscan github.com` (or your Git host's hostname).
 - **`.sops.yaml`** — your age *public* key (see step 2).
 
-Once edited, encrypt every `*.secret.yaml`, `clusterenv.yaml`, and Talos
-values file with `sops -e -i <file>` before committing — **never commit
+Once edited, encrypt real secret files with `./scripts/sops-files.sh encrypt`
+or `sops -e -i <file>` before committing. The helper intentionally excludes
+the documentation-only `sopssecret.secret.yaml` example. **Never commit real
 plaintext secrets**.
 
 ## 4. Generate and apply Talos machine configs
@@ -138,10 +151,11 @@ kubectl create secret generic sops-age -n flux-system \
   --from-file=age.agekey=./age.agekey
 ```
 
-(`sopssecret.secret.yaml` documents this exact command and is deliberately
-commented out of `kustomization.yaml` — it must never be committed, encrypted
-or otherwise, since Flux would have no way to decrypt it. See the "Safety:
-when (not) to touch `sops-age`" section of [`docs/secrets.md`](secrets.md).)
+(`sopssecret.secret.yaml` is a documentation-only example and is deliberately
+commented out of `kustomization.yaml`. Do not apply it through Flux and do not
+include it in bulk SOPS encryption loops, since Flux would have no way to
+decrypt the key that makes decryption possible. See the "Safety: when (not) to
+touch `sops-age`" section of [`docs/secrets.md`](secrets.md).)
 
 You'll also need your **deploy** private key as a local plaintext file for the
 `flux bootstrap` command below — generate the keypair now if you haven't yet

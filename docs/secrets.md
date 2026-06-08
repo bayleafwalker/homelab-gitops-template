@@ -3,9 +3,11 @@
 - SOPS rules (`.sops.yaml`) enforce age encryption for Talos/Kubernetes values files, `*.secret.yaml`, and `clusterenv.yaml`. `.sopsrc` points SOPS to the age key (`age.agekey`); keep the private key out of Git.
 - Core secrets to maintain (encrypt before committing):
   - `clusters/main/clusterenv.yaml` for VIPs, IP pools, domains and sensitive cluster settings.
-  - Flux secrets in `clusters/main/kubernetes/flux-system/flux` (`deploykey.secret.yaml`, `clustersettings.secret.yaml`, `sops-age`, etc.).
+  - Flux-managed files in `clusters/main/kubernetes/flux-system/flux` (`deploykey.secret.yaml`, `clustersettings.secret.yaml`, `cluster-secrets.secret.yaml`, etc.).
   - Any application values or `*.secret.yaml` files under `clusters/main/kubernetes/**`.
+- `sops-age` is different: create it out-of-band from `age.agekey` during bootstrap. Do not manage it through Flux or bulk-encrypt the documentation-only `sopssecret.secret.yaml` example.
 - Edit with `sops <file>` and commit only the encrypted output. Never commit plaintext or generated machine secrets.
+- For local helper loops, use `./scripts/sops-files.sh list|check|encrypt|decrypt`.
 - Use `clustertool genconfig` to regenerate machine configs from `talconfig.yaml` and `clusterenv.yaml`
 - Flux decrypts manifests using the `sops-age` secret referenced by `flux-entry.yaml`; keep that secret synchronized with your age public key.
 

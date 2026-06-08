@@ -20,7 +20,7 @@ spec:
       hostNetwork: true
       dnsPolicy: Default
       hostAliases:
-        - ip: 172.17.0.1
+        - ip: ${KUBERNETES_SERVICE_HOST_IP}
           hostnames:
             - kubernetes.default.svc
             - kubernetes.default.svc.cluster.local

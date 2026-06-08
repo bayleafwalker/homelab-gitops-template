@@ -3,11 +3,11 @@ cluster:
     disabled: true
 machine:
   nodeLabels:
-    upgrade.homelab.dev/enabled: "true"
+    "${UPGRADE_NODE_LABEL}": "true"
   time:
     disabled: false
     servers:
-      - time.cloudflare.com
+      - ${NTP_SERVER}
   kubelet:
     extraArgs:
       rotate-server-certificates: "true"

@@ -5,15 +5,14 @@ metadata:
   namespace: kube-system
 data:
   Corefile: |
-    # Forward your homelab domain to your internal DNS resolver (e.g. AdGuard
-    # Home / Pi-hole / OPNsense) so in-cluster lookups of LAN hostnames like
-    # `home.example.com` resolve to your internal LoadBalancer IPs rather than
-    # going out to the public internet. Replace both the zone name and the
-    # forward target with your own domain (DOMAIN_0) and resolver IP.
-    example.com:53 {
+    # Forward your local infra domain to your internal DNS resolver (e.g.
+    # AdGuard Home / Pi-hole / OPNsense) so in-cluster lookups of LAN hostnames
+    # resolve to your internal LoadBalancer IPs rather than going out to the
+    # public internet. DOMAIN_HOST and GATEWAY are substituted by Flux.
+    ${DOMAIN_HOST}:53 {
         errors
         cache 30
-        forward . 192.168.1.1 {
+        forward . ${GATEWAY} {
            max_concurrent 1000
         }
     }

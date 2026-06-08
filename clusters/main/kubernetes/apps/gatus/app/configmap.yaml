@@ -96,7 +96,7 @@ data:
 
       - name: Registry Internal
         group: System Internal
-        url: http://docker-registry.registry.svc.cluster.local:5000/v2/
+        url: http://${REGISTRY_SERVICE_ENDPOINT}/v2/
         interval: 1m
         conditions:
           - "[STATUS] == 200"

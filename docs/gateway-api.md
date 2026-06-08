@@ -4,6 +4,19 @@ This document describes the **cluster-scoped Gateway API primitives** and the **
 
 For post-cutover operational validation, use the Gateway API steady-state checklist in `docs/operations.md`.
 
+## Network assumptions
+
+The Gateway is designed as an internal LAN/VLAN entrypoint, not a public edge.
+`${GATEWAY_INTERNAL_IP}` should be a reserved LoadBalancer address on the
+cluster node subnet and outside DHCP. If possible, place cluster nodes and the
+LoadBalancer pool on a dedicated subnet/VLAN so Gateway traffic, storage
+traffic, and administrative access can be firewalled separately from client
+devices.
+
+This template uses Cilium Gateway API as the opinionated HTTP routing layer.
+Legacy nginx/Traefik ingress-controller paths are intentionally not the default
+for new services.
+
 ## Cluster primitives (shared)
 
 ### Internal Gateway (LAN)
