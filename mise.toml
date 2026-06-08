@@ -1,0 +1,117 @@
+[tools]
+kubectl = "1.36.1"
+kustomize = "5.7.1"
+talosctl = "1.13.3"
+flux2 = "2.8.8"
+helm = "4.1.3"
+sops = "3.12.1"
+age = "1.3.1"
+"github:trueforge-org/clustertool" = "3.0.9"
+
+[tasks.tool-versions]
+description = "Print pinned homelab tool versions."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+kubectl version --client=true
+kustomize version
+talosctl version --client
+flux --version
+helm version --short
+SOPS_DISABLE_VERSION_CHECK=true sops --version
+age --version
+'''
+
+[tasks.context]
+description = "Verify homelab direnv context before live cluster operations."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+expected_kubeconfig="${PWD}/clusters/.kube/config"
+expected_talosconfig="${PWD}/clusters/.talos/config"
+
+if [[ "${CLUSTER_NAME:-}" != "homelab" ]]; then
+  printf 'CLUSTER_NAME must be homelab, got %q\n' "${CLUSTER_NAME:-}" >&2
+  exit 1
+fi
+
+if [[ "${KUBECONFIG:-}" != "${expected_kubeconfig}" ]]; then
+  printf 'KUBECONFIG must be %s, got %q\n' "${expected_kubeconfig}" "${KUBECONFIG:-}" >&2
+  exit 1
+fi
+
+if [[ "${TALOSCONFIG:-}" != "${expected_talosconfig}" ]]; then
+  printf 'TALOSCONFIG must be %s, got %q\n' "${expected_talosconfig}" "${TALOSCONFIG:-}" >&2
+  exit 1
+fi
+
+test -f "${KUBECONFIG}"
+test -f "${TALOSCONFIG}"
+
+kubectl config current-context
+talosctl config info
+'''
+
+[tasks.kustomize]
+description = "Build the root Kubernetes kustomization without applying it."
+run = "kustomize build clusters/main/kubernetes >/dev/null"
+
+[tasks.validate]
+description = "Run local homelab validation."
+depends = ["kustomize"]
+
+[tasks.preflight]
+description = "Run validation and confirm live-cluster context."
+depends = ["validate", "context"]
+
+[tasks.flux-status]
+description = "Show Flux Kustomization and HelmRelease status for homelab."
+depends = ["context"]
+run = [
+  "flux get ks -A",
+  "flux get hr -A",
+]
+
+[tasks.reconcile]
+description = "Reconcile the homelab Git source and root Flux kustomization."
+depends = ["context"]
+confirm = "Reconcile the live homelab Flux source and flux-entry kustomization?"
+run = [
+  "flux reconcile source git cluster",
+  "flux reconcile kustomization flux-entry",
+]
+
+[tasks.clustertool-dev-build]
+description = "Build clustertool from source (main branch) to ~/.local/bin/clustertool-dev. Use when released version has version-gating issues."
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_DIR="${TMPDIR:-/tmp}/clustertool-src"
+INSTALL_PATH="${HOME}/.local/bin/clustertool-dev"
+GO_BIN="$(ls -d /nix/store/*-go-1.* 2>/dev/null | grep -v '\.drv\|bootstrap\|doc\|cross\|race' | sort -V | tail -1)/share/go/bin/go"
+
+if [[ ! -x "${GO_BIN}" ]]; then
+  echo "Could not find Go in /nix/store — install go via nix first" >&2
+  exit 1
+fi
+
+echo "Go: ${GO_BIN} ($("${GO_BIN}" version))"
+
+if [[ -d "${REPO_DIR}/.git" ]]; then
+  echo "Updating existing clone at ${REPO_DIR}..."
+  git -C "${REPO_DIR}" pull --ff-only
+else
+  echo "Cloning clustertool main branch..."
+  git clone --depth=1 https://github.com/trueforge-org/clustertool.git "${REPO_DIR}"
+fi
+
+echo "Building..."
+(cd "${REPO_DIR}" && "${GO_BIN}" build -o "${INSTALL_PATH}" .)
+chmod +x "${INSTALL_PATH}"
+
+echo "Installed: ${INSTALL_PATH}"
+"${INSTALL_PATH}" 2>&1 | grep -E "ClusterTool Version|talhelper" | head -5 || true
+'''

@@ -1,0 +1,179 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nextcloud
+  namespace: nextcloud
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: nextcloud
+      version: 45.0.0
+      sourceRef:
+        kind: HelmRepository
+        name: truecharts
+        namespace: flux-system
+      interval: 15m
+  timeout: 20m
+  maxHistory: 3
+  install:
+    createNamespace: true
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    credentials:
+      hetzner-s3:
+        type: s3
+        url: https://${HETZNER_S3_BUCKET_ENDPOINT}
+        bucket: ${HETZNER_S3_BUCKET_NAME}
+        path: backups
+    # CNPG
+    cnpg:
+      main:
+        enabled: true
+        backups:
+          enabled: true
+          credentials: hetzner-s3
+    # Redis
+    redis:
+      enabled: true
+    # Ingress
+    ingress:
+      main:
+        enabled: true
+        primary: true
+        ingressClassName: internal
+        annotations: {}
+        hosts:
+          - host: cloud.${DOMAIN_0}
+            paths:
+              - path: /
+                pathType: Prefix
+        integrations:
+          certManager:
+            enabled: true
+            certificateIssuer: domain-0-le-prod
+    # Persistence
+    persistence:
+      config:
+        enabled: true
+        existingClaim: nextcloud-config-pvc
+      data:
+        enabled: true
+        existingClaim: nextcloud-data-nfs-pvc
+        subPath: data
+      # Add further `persistence` entries here for extra mounts (e.g. external
+      # storage backends) — TrueCharts derives the pod-affinity PVC label below
+      # (`config_data_html_<name>`) from the sorted list of enabled mounts.
+      # html data is sometimes separate in TC, let's map data to be safe.
+    nextcloud:
+      credentials:
+        initialAdminUser: "${NEXTCLOUD_USERNAME}"
+        initialAdminPassword: "${NEXTCLOUD_PASSWORD}"
+      general:
+        accessIP: ${GATEWAY_INTERNAL_IP}
+        force_enable_allow_local_remote_servers: true
+  valuesFrom:
+    - kind: Secret
+      name: hetzner-s3
+      valuesKey: accessKey
+      targetPath: credentials.hetzner-s3.accessKey
+    - kind: Secret
+      name: hetzner-s3
+      valuesKey: secretKey
+      targetPath: credentials.hetzner-s3.secretKey
+    - kind: Secret
+      name: hetzner-s3
+      valuesKey: encrKey
+      targetPath: credentials.hetzner-s3.encrKey
+
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: postgresql.cnpg.io
+              kind: Cluster
+              name: nextcloud-cnpg-main
+            patch: |-
+              - op: add
+                path: /spec/bootstrap/initdb/passwordSecret
+                value:
+                  name: nextcloud-cnpg-password
+                  key: password
+          - target:
+              version: v1
+              kind: Secret
+              name: nextcloud-cnpg-main-user
+            patch: |-
+              - op: add
+                path: /stringData
+                value:
+                  username: app
+          - target:
+              group: apps
+              kind: Deployment
+              name: nextcloud-nginx
+            patch: |-
+              - op: replace
+                path: /spec/template/spec/affinity/podAffinity/requiredDuringSchedulingIgnoredDuringExecution/0/labelSelector/matchExpressions/0/values/0
+                value: config_data_html
+          - target:
+              group: apps
+              kind: Deployment
+              name: nextcloud-notify
+            patch: |-
+              - op: replace
+                path: /spec/template/spec/affinity/podAffinity/requiredDuringSchedulingIgnoredDuringExecution/0/labelSelector/matchExpressions/0/values/0
+                value: config_data_html
+          - target:
+              group: batch
+              kind: CronJob
+              name: nextcloud-nextcloud-cron
+            patch: |-
+              - op: add
+                path: /spec/jobTemplate/spec/template/spec/affinity
+                value:
+                  podAffinity:
+                    requiredDuringSchedulingIgnoredDuringExecution:
+                      - labelSelector:
+                          matchExpressions:
+                            - key: truecharts.org/pvc
+                              operator: In
+                              values:
+                                - config_data_html
+                        topologyKey: kubernetes.io/hostname
+          - target:
+              group: batch
+              kind: CronJob
+              name: nextcloud-preview-cron
+            patch: |-
+              - op: add
+                path: /spec/jobTemplate/spec/template/spec/affinity
+                value:
+                  podAffinity:
+                    requiredDuringSchedulingIgnoredDuringExecution:
+                      - labelSelector:
+                          matchExpressions:
+                            - key: truecharts.org/pvc
+                              operator: In
+                              values:
+                                - config_data_html
+                        topologyKey: kubernetes.io/hostname
+          - target:
+              group: networking.k8s.io
+              version: v1
+              kind: Ingress
+              name: nextcloud
+            patch: |-
+              $patch: delete
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: nextcloud

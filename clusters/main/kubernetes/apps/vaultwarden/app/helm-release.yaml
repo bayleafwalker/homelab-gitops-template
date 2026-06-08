@@ -1,0 +1,127 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: vaultwarden
+  namespace: vaultwarden
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: vaultwarden
+      version: 30.4.0
+      sourceRef:
+        kind: HelmRepository
+        name: truecharts
+        namespace: flux-system
+      interval: 15m
+  timeout: 20m
+  maxHistory: 3
+  driftDetection:
+    mode: warn
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    credentials:
+      hetzner-s3:
+        type: s3
+        url: https://${HETZNER_S3_BUCKET_ENDPOINT}
+        bucket: ${HETZNER_S3_BUCKET_NAME}
+        path: backups
+    ingress:
+      main:
+        enabled: true
+        primary: true
+        ingressClassName: internal
+        hosts:
+          - host: vault-nginx.${DOMAIN_0}
+            paths:
+              - path: /
+                pathType: Prefix
+        integrations:
+          certManager:
+            enabled: false
+            certificateIssuer: domain-0-le-prod
+    env:
+      DOMAIN: "https://vault.${DOMAIN_0}"
+      LOG_LEVEL: "info"
+      LOG_FILE: "/data/vaultwarden.log"
+      EXTENDED_LOGGING: "true"
+      EXTENDED_LOGGING_FORMAT: "timestamp,level,target,message"
+      SHOW_PASSWORD_HINT: "false"
+      INVITATIONS_ORG_INVITE_EXPIRATION_HOURS: 24
+      INVITATION_ORG_NAME: "Bitwarden"
+      USER_ORG_OVERLAP: true
+      SENDS_ALLOWED: true
+      INCOMPLETE_2FA_TIME_LIMIT: 3
+      INCOMPLETE_2FA_TIME_UNIT: "hour"
+    resources:
+      requests:
+        cpu: 15m
+        memory: 100Mi
+      limits:
+        cpu: null
+        memory: 256Mi
+    vaultwarden:
+      admin:
+        enabled: true
+        disableAdminToken: false
+    persistence:
+      data:
+        enabled: true
+        mountPath: /data
+        size: 10Gi
+    cnpg:
+      main:
+        backups:
+          enabled: true
+          credentials: hetzner-s3
+          retentionPolicy: "30d"
+          encryption:
+            enabled: false
+          scheduledBackups:
+            - name: daily
+              schedule: "0 0 2 * * *"
+              backupOwnerReference: cluster
+              immediate: true
+              suspend: false
+  valuesFrom:
+    - kind: Secret
+      name: hetzner-s3
+      valuesKey: accessKey
+      targetPath: credentials.hetzner-s3.accessKey
+    - kind: Secret
+      name: hetzner-s3
+      valuesKey: secretKey
+      targetPath: credentials.hetzner-s3.secretKey
+    - kind: Secret
+      name: hetzner-s3
+      valuesKey: encrKey
+      targetPath: credentials.hetzner-s3.encrKey
+    - kind: Secret
+      name: vaultwarden-admin
+      valuesKey: ADMIN_TOKEN
+      targetPath: vaultwarden.admin.token
+
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: networking.k8s.io
+              version: v1
+              kind: Ingress
+              name: vaultwarden
+            patch: |-
+              $patch: delete
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: vaultwarden

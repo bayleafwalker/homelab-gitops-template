@@ -1,0 +1,195 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: blocky
+  namespace: blocky
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: blocky
+      version: 22.8.0
+      sourceRef:
+        kind: HelmRepository
+        name: truecharts
+        namespace: flux-system
+      interval: 15m
+  timeout: 20m
+  maxHistory: 3
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    ## set stopAll to "true" if you do not want to use blocky
+    # and/or disable its service
+    global:
+      stopAll: false
+
+    resources:
+      requests:
+        cpu: 11m
+        memory: 284Mi
+      limits:
+        cpu: null
+        memory: 512Mi
+    service:
+      dns:
+        externalTrafficPolicy: Cluster
+        loadBalancerIP: ${BLOCKY_IP}
+        type: LoadBalancer
+        integrations:
+          metallb:
+            enabled: false
+    k8sgateway:
+      # -- list of processed domains
+      domains:
+      - domain: "${DOMAIN_0}"
+        # -- Optional configuration option for DNS01 challenge that will redirect all acme
+        # challenge requests to external cloud domain (e.g. managed by cert-manager)
+        # See: https://cert-manager.io/docs/configuration/acme/dns01/
+        dnsChallenge:
+          enabled: false
+          domain: dns01.clouddns.com
+
+      forward:
+        enabled: false
+        primary: tls://1.1.1.1
+        secondary: tls://1.0.0.1
+        options:
+          - name: tls_servername
+            value: cloudflare-dns.com
+
+    # Ensure node-level consumers (e.g. NFS mounts) can resolve infra hosts.
+    customDNS:
+      mapping:
+        - domain: "opnsense.${DOMAIN_HOST}"
+          dnsserver: ${GATEWAY}
+        - domain: "truenas.${DOMAIN_HOST}"
+          dnsserver: ${TRUENAS_IP}
+        - domain: "ldap.${DOMAIN_HOST}"
+          dnsserver: ${LDAP_OUTPOST_IP}
+        - domain: "forgejo-ssh.${DOMAIN_0}"
+          dnsserver: ${FORGEJO_SSH_IP}
+        - domain: "sprintctl-pg.${DOMAIN_0}"
+          dnsserver: ${POSTGRES_LB_IP}
+        - domain: "shell.${DOMAIN_HOST}"
+          dnsserver: ${SHELL_IP}
+        - domain: "shell.${DOMAIN_0}"
+          dnsserver: ${SHELL_IP}
+
+    # CANNOT be defined in above yaml section
+    queryLog:
+      # optional one of: mysql, postgresql, csv, csv-client. If empty, log to console only
+      type: ""
+
+    caching:
+      cacheTimeNegative: 5m
+
+    configmap:
+      dashboard:
+        enabled: false
+      datasource:
+        enabled: false
+
+    cnpg:
+      main:
+        enabled: false
+
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: ConfigMap
+              name: blocky-corefile
+            patch: |-
+              - op: replace
+                path: /data/Corefile
+                value: |-
+                  .:5353 {
+                      errors
+                      log
+                      health {
+                          lameduck 5s
+                      }
+                      ready
+                      k8s_gateway "${DOMAIN_0}" {
+                        apex blocky.blocky
+                        ttl 300
+                        resources Service Gateway HTTPRoute
+                        fallthrough
+                      }
+
+                      prometheus 0.0.0.0:9153
+                      forward . 1.1.1.1
+                      loop
+                      reload
+                      loadbalance
+                  }
+          - target:
+              group: rbac.authorization.k8s.io
+              kind: ClusterRole
+              name: blocky
+            patch: |-
+              - op: add
+                path: /rules/-
+                value:
+                  apiGroups:
+                    - gateway.networking.k8s.io
+                  resources:
+                    - gatewayclasses
+                    - gateways
+                    - httproutes
+                  verbs:
+                    - list
+                    - watch
+              - op: add
+                path: /rules/-
+                value:
+                  apiGroups:
+                    - ""
+                  resources:
+                    - endpoints
+                  verbs:
+                    - list
+                    - watch
+              - op: add
+                path: /rules/-
+                value:
+                  apiGroups:
+                    - discovery.k8s.io
+                  resources:
+                    - endpointslices
+                  verbs:
+                    - list
+                    - watch
+              - op: add
+                path: /rules/-
+                value:
+                  apiGroups:
+                    - apiextensions.k8s.io
+                  resources:
+                    - customresourcedefinitions
+                  verbs:
+                    - get
+                    - list
+                    - watch
+          - target:
+              version: v1
+              kind: Service
+              name: blocky-dns
+            patch: |-
+              - op: add
+                path: /spec/loadBalancerIP
+                value: ${BLOCKY_IP}
+              - op: add
+                path: /spec/loadBalancerClass
+                value: io.cilium/l2-announcer

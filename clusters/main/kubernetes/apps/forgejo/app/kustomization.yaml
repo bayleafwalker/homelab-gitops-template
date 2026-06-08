@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - forgejo-admin.secret.yaml
+  - forgejo-db.yaml
+  - helm-release.yaml
+  - lbippool.yaml
+  - l2announcementpolicy.yaml
+  - gateway-api-routes.yaml

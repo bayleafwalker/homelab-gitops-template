@@ -1,0 +1,19 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-node-registry
+  namespace: spegel
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: spegel
+      app.kubernetes.io/name: spegel
+      pod.name: main
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "5000"
+              protocol: TCP

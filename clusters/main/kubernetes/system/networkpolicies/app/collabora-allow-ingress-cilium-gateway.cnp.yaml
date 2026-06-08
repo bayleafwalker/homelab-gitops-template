@@ -1,0 +1,20 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-cilium-gateway
+  namespace: collabora
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: collabora
+      app.kubernetes.io/name: collabora-online
+      type: main
+  ingress:
+    - fromEntities:
+        - ingress
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "9980"
+              protocol: TCP

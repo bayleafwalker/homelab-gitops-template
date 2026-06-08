@@ -1,0 +1,20 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-gatus-internal-alertmanager
+  namespace: kube-prometheus-stack
+spec:
+  endpointSelector:
+    matchLabels:
+      alertmanager: kube-prometheus-stack-alertmanager
+      app.kubernetes.io/name: alertmanager
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: gatus
+            k8s:app.kubernetes.io/instance: gatus
+            k8s:app.kubernetes.io/name: gatus
+      toPorts:
+        - ports:
+            - port: "9093"
+              protocol: TCP

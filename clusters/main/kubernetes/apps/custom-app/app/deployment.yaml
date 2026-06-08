@@ -1,0 +1,68 @@
+# Example: deploying your own container image from the in-cluster registry.
+#
+# Replace `your-app` with your image name and push builds to the registry
+# documented in docs/registry.md (`${REGISTRY_IP}:5000/your-app:<tag>`).
+# This is the same pattern used to run custom services such as
+# https://github.com/bayleafwalker/actionq and https://github.com/bayleafwalker/sprintctl
+# in the cluster this template was derived from.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom-app
+  namespace: custom-app
+  labels:
+    app.kubernetes.io/name: custom-app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: custom-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: custom-app
+    spec:
+      serviceAccountName: custom-app
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: ${REGISTRY_IP}:5000/your-app:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: PORT
+              value: "8080"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

@@ -1,0 +1,49 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nextcloud-nfs
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nextcloud-data-nfs-pv
+spec:
+  storageClassName: nextcloud-nfs
+  capacity:
+    storage: 1Mi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: ${TRUENAS_IP}
+    path: /mnt/storage_layer/weave/rwx/nextcloud
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+    - tcp
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-data-nfs-pvc
+  namespace: nextcloud
+spec:
+  storageClassName: nextcloud-nfs
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 1Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-config-pvc
+  namespace: nextcloud
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi

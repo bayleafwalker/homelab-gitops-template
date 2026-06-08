@@ -1,0 +1,43 @@
+age.agekey
+clustertool
+clustertool.exe
+logs/
+
+# SSH keys and configuration
+clusters/.ssh/
+clusters/.ssh/*
+
+# Kubernetes configuration
+clusters/.kube/
+clusters/.kube/*
+
+# Talos configuration
+clusters/.talos/
+clusters/.talos/*
+
+# Certificates and key material
+*.pem
+deploy-key
+deploy-key.pub
+
+# Temporary files
+temp.txt
+tmp/
+tmp/*
+.decrypted~*
+.decrypted~*.yaml
+.decrypted~*.yml
+
+# Cache directories
+**/clustertool-cache/
+
+# Editors / IDEs
+.vscode/
+.vibe/
+.devcontainer/
+
+# Local direnv/environment files
+.envrc
+.envrc.local
+.envrc.*
+!.envrc.example

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: registry
+  annotations:
+    volsync.backube/privileged-movers: "true"
+  labels:
+    app.kubernetes.io/name: registry
+    goldilocks.fairwinds.com/enabled: "true"

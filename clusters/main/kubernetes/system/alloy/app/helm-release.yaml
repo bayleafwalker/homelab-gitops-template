@@ -1,0 +1,80 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: alloy-canary
+  namespace: loki
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: alloy
+      version: 1.8.2
+      sourceRef:
+        kind: HelmRepository
+        name: grafana-charts
+        namespace: flux-system
+      interval: 5m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    crds:
+      create: false
+
+    rbac:
+      create: false
+
+    service:
+      enabled: false
+
+    serviceMonitor:
+      enabled: false
+
+    controller:
+      type: daemonset
+      nodeSelector:
+        kubernetes.io/hostname: k8s-worker-gpu-1
+
+    alloy:
+      enableReporting: false
+      mounts:
+        varlog: true
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          memory: 512Mi
+      configMap:
+        content: |-
+          loki.write "default" {
+            endpoint {
+              url = "http://loki-gateway.loki.svc.cluster.local/loki/api/v1/push"
+            }
+          }
+
+          local.file_match "pods" {
+            path_targets = [
+              {
+                "__path__" = "/var/log/pods/loki_*/*/*.log",
+                "job"      = "kubernetes-pods",
+              },
+            ]
+          }
+
+          loki.process "pods" {
+            stage.static_labels {
+              values = {
+                pipeline = "alloy-canary",
+              }
+            }
+            forward_to = [loki.write.default.receiver]
+          }
+
+          loki.source.file "pods" {
+            targets    = local.file_match.pods.targets
+            forward_to = [loki.process.pods.receiver]
+          }

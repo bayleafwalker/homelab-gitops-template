@@ -1,0 +1,26 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: blackbox-exporter
+  namespace: kube-prometheus-stack
+spec:
+  groups:
+    - name: blackbox-exporter.rules
+      rules:
+        - alert: BlackboxProbeFailed
+          expr: probe_success{monitoring="blackbox"} == 0
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Blackbox probe failed: {{ $labels.instance }}"
+            description: "Endpoint {{ $labels.instance }} is failing blackbox probes for 2m."
+
+        - alert: BlackboxProbeSslCertExpiringSoon
+          expr: (probe_ssl_earliest_cert_expiry{monitoring="blackbox"} - time()) < 14 * 24 * 3600
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "TLS cert expiring soon: {{ $labels.instance }}"
+            description: "TLS certificate for {{ $labels.instance }} expires in {{ humanizeDuration $value }}."

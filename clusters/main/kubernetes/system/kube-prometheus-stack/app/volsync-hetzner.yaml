@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: volsync-restic-grafana-storage
+  namespace: kube-prometheus-stack
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: ${HETZNER_ACCESS_KEY}
+  AWS_SECRET_ACCESS_KEY: ${HETZNER_SECRET_KEY}
+  RESTIC_PASSWORD: ${VOLSYNC_RESTIC_PASSWORD}
+  RESTIC_REPOSITORY: s3:https://${HETZNER_S3_BUCKET_ENDPOINT}/${HETZNER_S3_BUCKET_NAME}/volsync/kube-prometheus-stack/grafana-storage
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: grafana-storage
+  namespace: kube-prometheus-stack
+spec:
+  sourcePVC: storage-kube-prometheus-stack-grafana-0
+  trigger:
+    schedule: "32 4 * * *"
+  restic:
+    moverSecurityContext:
+      runAsUser: 472
+      runAsGroup: 472
+    repository: volsync-restic-grafana-storage
+    copyMethod: Snapshot
+    pruneIntervalDays: 7
+    retain:
+      daily: 7
+      weekly: 4
+      monthly: 3
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationDestination
+metadata:
+  name: grafana-storage-restore-drill
+  namespace: kube-prometheus-stack
+spec:
+  trigger:
+    schedule: "40 6 1 * *"
+  restic:
+    repository: volsync-restic-grafana-storage
+    copyMethod: None
+    cleanupTempPVC: true
+    cleanupCachePVC: true
+    storageClassName: longhorn
+    accessModes:
+      - ReadWriteOnce
+    capacity: 5Gi

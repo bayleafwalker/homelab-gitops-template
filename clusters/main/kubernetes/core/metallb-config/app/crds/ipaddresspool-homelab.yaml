@@ -1,0 +1,10 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: homelab
+  namespace: metallb
+spec:
+  addresses:
+    - ${HOMELAB_METALLB_RANGE}
+  autoAssign: false
+  avoidBuggyIPs: true

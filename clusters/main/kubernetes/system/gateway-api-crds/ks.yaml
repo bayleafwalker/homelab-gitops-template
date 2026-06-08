@@ -1,0 +1,15 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateway-api-crds
+  namespace: flux-system
+spec:
+  interval: 10m
+  # Cilium gateway controller watches TLSRoute; use experimental CRDs so
+  # tlsroutes.gateway.networking.k8s.io is present and operator logs do not
+  # spam "TLSRouteList kind not registered".
+  path: ./config/crd/experimental
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: gateway-api

@@ -1,0 +1,28 @@
+---
+# Talos patch to configure containerd to use the local docker registry.
+# Prefer the dedicated LoadBalancer endpoint and keep the internal service mirror.
+#
+# Talos machine config patches are applied directly by talhelper/talosctl (no
+# Flux variable substitution), so the registry domain and LoadBalancer IP below
+# are written out concretely. Replace `registry.example.com` and `192.168.1.50`
+# with your own registry host and the IP you assign via REGISTRY_IP in
+# clustersettings (must match across both).
+machine:
+  registries:
+    mirrors:
+      registry.example.com:
+        endpoints:
+          - https://registry.example.com
+      docker-registry.registry.svc.cluster.local:5000:
+        endpoints:
+          - http://docker-registry.registry.svc.cluster.local:5000
+      192.168.1.50:5000:
+        endpoints:
+          - http://192.168.1.50:5000
+    config:
+      docker-registry.registry.svc.cluster.local:5000:
+        tls:
+          insecureSkipVerify: true
+      192.168.1.50:5000:
+        tls:
+          insecureSkipVerify: true

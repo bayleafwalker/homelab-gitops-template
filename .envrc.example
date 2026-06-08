@@ -1,0 +1,14 @@
+# direnv configuration for the homelab cluster.
+# Copy to .envrc locally and run: direnv allow
+
+export KUBECONFIG="${PWD}/clusters/.kube/config"
+export TALOSCONFIG="${PWD}/clusters/.talos/config"
+export CLUSTER_NAME="homelab"
+export CLUSTER_TYPE="homelab"
+
+export PS1="[homelab] $PS1"
+
+echo "homelab context loaded"
+echo "  KUBECONFIG:  ${KUBECONFIG}"
+echo "  TALOSCONFIG: ${TALOSCONFIG}"
+echo "  CLUSTER:     ${CLUSTER_NAME}"

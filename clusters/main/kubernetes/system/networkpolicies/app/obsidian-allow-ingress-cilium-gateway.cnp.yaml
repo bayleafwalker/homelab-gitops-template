@@ -1,0 +1,19 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-cilium-gateway
+  namespace: obsidian
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: obsidian
+      app.kubernetes.io/name: obsidian
+  ingress:
+    - fromEntities:
+        - ingress
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

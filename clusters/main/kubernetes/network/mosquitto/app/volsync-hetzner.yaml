@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: volsync-restic-mosquitto-data
+  namespace: mosquitto
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: ${HETZNER_ACCESS_KEY}
+  AWS_SECRET_ACCESS_KEY: ${HETZNER_SECRET_KEY}
+  RESTIC_PASSWORD: ${VOLSYNC_RESTIC_PASSWORD}
+  RESTIC_REPOSITORY: s3:https://${HETZNER_S3_BUCKET_ENDPOINT}/${HETZNER_S3_BUCKET_NAME}/volsync/mosquitto/mosquitto-data
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: mosquitto-data
+  namespace: mosquitto
+spec:
+  sourcePVC: mosquitto-data
+  trigger:
+    schedule: "02 4 * * *"
+  restic:
+    moverSecurityContext:
+      runAsUser: 568
+      runAsGroup: 568
+    repository: volsync-restic-mosquitto-data
+    copyMethod: Snapshot
+    pruneIntervalDays: 7
+    retain:
+      daily: 7
+      weekly: 4
+      monthly: 3

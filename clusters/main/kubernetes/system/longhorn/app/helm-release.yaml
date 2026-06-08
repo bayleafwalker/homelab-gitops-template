@@ -1,0 +1,244 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: longhorn
+    namespace: longhorn-system
+spec:
+    interval: 5m
+    releaseName: longhorn
+    chart:
+        spec:
+            chart: longhorn
+            version: 1.12.0
+            sourceRef:
+                kind: HelmRepository
+                name: home-ops-mirror
+                namespace: flux-system
+    install:
+        timeout: 10m
+        createNamespace: true
+        crds: CreateReplace
+        remediation:
+            retries: 3
+    upgrade:
+        timeout: 10m
+        crds: CreateReplace
+        remediation:
+            retries: 3
+    values:
+        defaultSettings:
+            # With 3 Longhorn nodes, 2 replicas is a safer default (new volumes only).
+            defaultReplicaCount: 2
+            replicaAutoBalance: least-effort
+            replicaSoftAntiAffinity: true
+            # Prevent Longhorn from auto-creating a default disk on every new node (e.g. control-plane/ARM nodes).
+            createDefaultDiskLabeledNodes: true
+            # Keep Longhorn data off the Talos OS disk by using the Talos user volume mount.
+            defaultDataPath: /var/mnt/longhorn
+            # Overprovisioning might be needed when using volsync
+            storageOverProvisioningPercentage: 100000
+            # Allow scheduling even if a node has less than 25% free space.
+            # (Longhorn blocks scheduling when free space is below this threshold.)
+            storageMinimalAvailablePercentage: 20
+            v2DataEngine: false
+            # Offsite backups (Hetzner Object Storage)
+            backupTarget: "s3://${HETZNER_S3_BUCKET_NAME}@${HETZNER_S3_BUCKET_ENDPOINT}/longhorn"
+            backupTargetCredentialSecret: "longhorn-hetzner-s3"
+        persistence:
+            # Set to false to pick another CSI as default
+            defaultClass: true
+            # New PVCs via the default StorageClass will use 2 replicas by default.
+            defaultClassReplicaCount: 2
+
+    postRenderers:
+      - kustomize:
+          patches:
+            - target:
+                group: apps
+                version: v1
+                kind: DaemonSet
+                name: longhorn-manager
+              patch: |-
+                apiVersion: apps/v1
+                kind: DaemonSet
+                metadata:
+                  name: longhorn-manager
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: longhorn-manager
+                          resources:
+                            requests:
+                              cpu: 100m
+                              memory: 256Mi
+                            limits:
+                              memory: 1Gi
+                        - name: pre-pull-share-manager-image
+                          resources:
+                            requests:
+                              cpu: 10m
+                              memory: 32Mi
+                            limits:
+                              memory: 128Mi
+            - target:
+                group: apps
+                version: v1
+                kind: DaemonSet
+                name: longhorn-csi-plugin
+              patch: |-
+                apiVersion: apps/v1
+                kind: DaemonSet
+                metadata:
+                  name: longhorn-csi-plugin
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: longhorn-csi-plugin
+                          resources:
+                            requests:
+                              cpu: 100m
+                              memory: 256Mi
+                            limits:
+                              memory: 1Gi
+                        - name: node-driver-registrar
+                          resources:
+                            requests:
+                              cpu: 20m
+                              memory: 64Mi
+                            limits:
+                              memory: 256Mi
+                        - name: longhorn-liveness-probe
+                          resources:
+                            requests:
+                              cpu: 10m
+                              memory: 32Mi
+                            limits:
+                              memory: 128Mi
+            - target:
+                group: apps
+                version: v1
+                kind: Deployment
+                name: longhorn-driver-deployer
+              patch: |-
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: longhorn-driver-deployer
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: longhorn-driver-deployer
+                          resources:
+                            requests:
+                              cpu: 10m
+                              memory: 64Mi
+                            limits:
+                              memory: 256Mi
+            - target:
+                group: apps
+                version: v1
+                kind: Deployment
+                name: longhorn-ui
+              patch: |-
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: longhorn-ui
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: longhorn-ui
+                          resources:
+                            requests:
+                              cpu: 10m
+                              memory: 64Mi
+                            limits:
+                              memory: 256Mi
+            - target:
+                group: apps
+                version: v1
+                kind: Deployment
+                name: csi-attacher
+              patch: |-
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: csi-attacher
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: csi-attacher
+                          resources:
+                            requests:
+                              cpu: 20m
+                              memory: 64Mi
+                            limits:
+                              memory: 256Mi
+            - target:
+                group: apps
+                version: v1
+                kind: Deployment
+                name: csi-provisioner
+              patch: |-
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: csi-provisioner
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: csi-provisioner
+                          resources:
+                            requests:
+                              cpu: 20m
+                              memory: 64Mi
+                            limits:
+                              memory: 256Mi
+            - target:
+                group: apps
+                version: v1
+                kind: Deployment
+                name: csi-resizer
+              patch: |-
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: csi-resizer
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: csi-resizer
+                          resources:
+                            requests:
+                              cpu: 20m
+                              memory: 64Mi
+                            limits:
+                              memory: 256Mi
+            - target:
+                group: apps
+                version: v1
+                kind: Deployment
+                name: csi-snapshotter
+              patch: |-
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: csi-snapshotter
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: csi-snapshotter
+                          resources:
+                            requests:
+                              cpu: 20m
+                              memory: 64Mi
+                            limits:
+                              memory: 256Mi

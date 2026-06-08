@@ -1,0 +1,12 @@
+apiVersion: longhorn.io/v1beta2
+kind: BackupTarget
+metadata:
+  name: default
+  namespace: longhorn-system
+spec:
+  # Longhorn expects: s3://<bucket>@<region>/<optional-prefix>
+  # Hetzner Object Storage is S3-compatible; the endpoint + credentials are provided via the referenced Secret.
+  # Region should match the Hetzner location (e.g. `hel1`, `fsn1`) used by the endpoint.
+  backupTargetURL: s3://${HETZNER_S3_BUCKET_NAME}@${HETZNER_S3_BUCKET_ENDPOINT}/longhorn
+  credentialSecret: longhorn-hetzner-s3
+  pollInterval: 5m0s

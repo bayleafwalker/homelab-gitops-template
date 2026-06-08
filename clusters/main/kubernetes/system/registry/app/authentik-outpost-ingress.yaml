@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentik-outpost
+  namespace: registry
+spec:
+  type: ExternalName
+  externalName: authentik-http.authentik.svc.cluster.local
+  ports:
+    - name: http
+      port: 10230
+      targetPort: 10230

@@ -1,0 +1,146 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-egress-gatus-internal-core-services
+  namespace: gatus
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: gatus
+      app.kubernetes.io/name: gatus
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: apps
+            k8s:app.kubernetes.io/instance: homepage
+            k8s:app.kubernetes.io/name: homepage
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: authentik
+            k8s:app.kubernetes.io/instance: authentik
+            k8s:app.kubernetes.io/name: authentik
+            k8s:pod.name: main
+      toPorts:
+        - ports:
+            - port: "10230"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: nextcloud
+            k8s:app.kubernetes.io/instance: nextcloud
+            k8s:app.kubernetes.io/name: nextcloud
+            k8s:pod.name: nginx
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: paperless
+            k8s:app.kubernetes.io/instance: paperless
+            k8s:app.kubernetes.io/name: paperless-ngx
+            k8s:pod.name: main
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: obsidian
+            k8s:app.kubernetes.io/instance: obsidian
+            k8s:app.kubernetes.io/name: obsidian
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: custom-app
+            k8s:app.kubernetes.io/name: custom-app
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: vaultwarden
+            k8s:app.kubernetes.io/instance: vaultwarden
+            k8s:app.kubernetes.io/name: vaultwarden
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: vscode
+            k8s:app.kubernetes.io/instance: vscode
+            k8s:app.kubernetes.io/name: code-server
+      toPorts:
+        - ports:
+            - port: "8443"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-prometheus-stack
+            k8s:app.kubernetes.io/instance: kube-prometheus-stack
+            k8s:app.kubernetes.io/name: grafana
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-prometheus-stack
+            k8s:app.kubernetes.io/name: prometheus
+            k8s:operator.prometheus.io/name: kube-prometheus-stack-prometheus
+      toPorts:
+        - ports:
+            - port: "9090"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-prometheus-stack
+            k8s:app.kubernetes.io/name: alertmanager
+            k8s:alertmanager: kube-prometheus-stack-alertmanager
+      toPorts:
+        - ports:
+            - port: "9093"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: headlamp
+            k8s:app.kubernetes.io/instance: headlamp
+            k8s:app.kubernetes.io/name: headlamp
+      toPorts:
+        - ports:
+            - port: "4466"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: registry
+            k8s:app: docker-registry
+      toPorts:
+        - ports:
+            - port: "5000"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: couchdb
+            k8s:app: couchdb
+            k8s:release: couchdb
+      toPorts:
+        - ports:
+            - port: "5984"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: omada-controller
+            k8s:app.kubernetes.io/name: omada-gateway-proxy
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

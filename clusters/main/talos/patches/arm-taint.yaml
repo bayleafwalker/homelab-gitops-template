@@ -1,0 +1,5 @@
+machine:
+  kubelet:
+    extraArgs:
+      register-with-taints: "node.kubernetes.io/arm=true:NoSchedule"
+      node-labels: "node.kubernetes.io/arm=true"

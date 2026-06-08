@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backup-observability
+  labels:
+    app.kubernetes.io/name: backup-observability

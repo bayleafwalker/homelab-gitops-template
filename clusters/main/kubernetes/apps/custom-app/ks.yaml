@@ -1,0 +1,15 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: custom-app
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./clusters/main/kubernetes/apps/custom-app/app
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  dependsOn:
+    - name: networkpolicies
+  timeout: 15m

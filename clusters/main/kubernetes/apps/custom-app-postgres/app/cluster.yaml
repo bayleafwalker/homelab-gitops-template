@@ -1,0 +1,36 @@
+# Example: a CloudNativePG cluster for a custom app, with off-cluster S3
+# backups. See docs/backups-cnpg.md for the full pattern this is based on.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: custom-app-postgres
+  namespace: custom-app
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.13@sha256:acbed84c842730d6cefb89e7135743fe160233296b645b2f30f49fa18e2ebcf1
+  backup:
+    retentionPolicy: "30d"
+    barmanObjectStore:
+      destinationPath: s3://${S3_BACKUP_BUCKET}/backups/cnpg/custom-app/custom-app-postgres
+      endpointURL: https://${S3_BACKUP_ENDPOINT}
+      s3Credentials:
+        accessKeyId:
+          name: custom-app-postgres-backup-s3
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: custom-app-postgres-backup-s3
+          key: SECRET_ACCESS_KEY
+        region:
+          name: custom-app-postgres-backup-s3
+          key: REGION
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+  storage:
+    size: 1Gi
+    storageClass: longhorn
+  bootstrap:
+    initdb:
+      database: app
+      owner: app

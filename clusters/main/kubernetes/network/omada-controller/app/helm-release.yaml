@@ -1,0 +1,130 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: omada-controller
+  namespace: omada-controller
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: omada-controller
+    # use older version for error proofing
+      version: 19.4.3
+      #version: 16.7.20
+      sourceRef:
+        kind: HelmRepository
+        name: truecharts
+        namespace: flux-system
+      interval: 15m
+  timeout: 20m
+  maxHistory: 3
+  driftDetection:
+    mode: warn
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  values:
+    # use older image due to issues with 5.15
+    #image:
+    #  tag: 5.14.32.4
+    #  tag: 5.13.30.8
+    ingress:
+      main:
+        enabled: false
+    service:
+      main:
+        type: LoadBalancer
+        annotations:
+          metallb.io/allow-shared-ip: omada
+          metallb.io/loadBalancerIPs: ${OMADA_IP}
+        externalTrafficPolicy: Local
+      comm:
+        type: LoadBalancer
+        annotations:
+          metallb.io/allow-shared-ip: omada
+          metallb.io/loadBalancerIPs: ${OMADA_IP}
+        externalTrafficPolicy: Local
+      omada-tcp:
+        enabled: true
+        type: LoadBalancer
+        annotations:
+          metallb.io/allow-shared-ip: omada
+          metallb.io/loadBalancerIPs: ${OMADA_IP}
+        externalTrafficPolicy: Local
+        ports:
+          omada-tcp5:
+            enabled: true
+            port: 29815
+            protocol: tcp
+            targetPort: 29815
+          omada-tcp6:
+            enabled: true
+            port: 29816
+            protocol: tcp
+            targetPort: 29816
+          omada-tcp7:
+            enabled: true
+            port: 29817
+            protocol: tcp
+            targetPort: 29817
+      omada-udp:
+        enabled: true
+        type: LoadBalancer
+        annotations:
+          metallb.io/allow-shared-ip: omada
+          metallb.io/loadBalancerIPs: ${OMADA_IP}
+        externalTrafficPolicy: Local
+        ports:
+          disc-27001-udp:
+            enabled: true
+            port: 27001
+            protocol: udp
+            targetPort: 27001
+          disc-27002-udp:
+            enabled: true
+            port: 27002
+            protocol: udp
+            targetPort: 27002
+          disc-27003-udp:
+            enabled: true
+            port: 27003
+            protocol: udp
+            targetPort: 27003
+          disc-27004-udp:
+            enabled: true
+            port: 27004
+            protocol: udp
+            targetPort: 27004
+    # extend startup-probe tolerance for init and memory allocation
+    workload:
+      main:
+        podSpec:
+          affinity: {}
+          containers:
+            main:
+              probes:
+                startup:
+                  enabled: true
+                  custom: true
+                  spec:
+                    failureThreshold: 120
+                    periodSeconds: 5
+                    timeoutSeconds: 3
+                    initialDelaySeconds: 10
+                    successThreshold: 1
+              resources:
+                requests:
+                  cpu: 80m
+                  memory: 2304Mi
+                limits:
+                  cpu: null
+                  # Goldilocks (VPA) target is ~2.3Gi memory; keep headroom to avoid OOM restarts.
+                  memory: 3Gi

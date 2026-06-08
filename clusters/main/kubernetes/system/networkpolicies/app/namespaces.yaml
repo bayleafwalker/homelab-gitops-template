@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gatus
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: etcd-backup
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: headlamp
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vscode
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: authentik
+  annotations:
+    volsync.backube/privileged-movers: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vaultwarden
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: registry
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: obsidian
+  annotations:
+    volsync.backube/privileged-movers: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-prometheus-stack
+  annotations:
+    volsync.backube/privileged-movers: "true"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loki
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mosquitto
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: omada-controller
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: volsync
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudnative-pg

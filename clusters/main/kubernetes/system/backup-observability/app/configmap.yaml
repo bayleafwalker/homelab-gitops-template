@@ -1,0 +1,154 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-observability-exporter
+  namespace: backup-observability
+data:
+  exporter.py: |
+    import datetime
+    import json
+    import os
+    import ssl
+    import urllib.error
+    import urllib.request
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    API = os.environ.get("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc")
+    PORT = os.environ.get("KUBERNETES_SERVICE_PORT_HTTPS", "443")
+    TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    CA_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+    def token():
+      with open(TOKEN_PATH, "r", encoding="utf-8") as handle:
+        return handle.read().strip()
+
+    def parse_time(value):
+      if not value:
+        return 0
+      try:
+        return int(datetime.datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp())
+      except ValueError:
+        return 0
+
+    def metric_label(value):
+      return str(value).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+
+    def get(path):
+      url = f"https://{API}:{PORT}{path}"
+      req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token()}"})
+      ctx = ssl.create_default_context(cafile=CA_PATH)
+      try:
+        with urllib.request.urlopen(req, context=ctx, timeout=10) as response:
+          return json.loads(response.read().decode("utf-8"))
+      except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+          return {"items": []}
+        raise
+
+    def emit(name, labels, value):
+      label_text = ",".join(f'{key}="{metric_label(val)}"' for key, val in labels.items())
+      return f"{name}{{{label_text}}} {value}"
+
+    def collect():
+      lines = [
+        "# HELP homelab_backup_observability_up Backup observability exporter health.",
+        "# TYPE homelab_backup_observability_up gauge",
+        "homelab_backup_observability_up 1",
+      ]
+
+      volsync = get("/apis/volsync.backube/v1alpha1/replicationsources").get("items", [])
+      lines.extend([
+        "# HELP homelab_volsync_replicationsource_last_sync_timestamp Last successful VolSync sync timestamp.",
+        "# TYPE homelab_volsync_replicationsource_last_sync_timestamp gauge",
+        "# HELP homelab_volsync_replicationsource_info VolSync ReplicationSource status inventory.",
+        "# TYPE homelab_volsync_replicationsource_info gauge",
+      ])
+      for item in volsync:
+        meta = item.get("metadata", {})
+        spec = item.get("spec", {})
+        status = item.get("status", {})
+        labels = {
+          "namespace": meta.get("namespace", ""),
+          "name": meta.get("name", ""),
+          "source_pvc": spec.get("sourcePVC", ""),
+          "schedule": spec.get("trigger", {}).get("schedule", ""),
+          "latest_mover_status": status.get("latestMoverStatus", ""),
+        }
+        lines.append(emit("homelab_volsync_replicationsource_info", labels, 1))
+        lines.append(emit("homelab_volsync_replicationsource_last_sync_timestamp", labels, parse_time(status.get("lastSyncTime"))))
+
+      cnpg_clusters = get("/apis/postgresql.cnpg.io/v1/clusters").get("items", [])
+      lines.extend([
+        "# HELP homelab_cnpg_cluster_backup_configured CNPG clusters with backup configured.",
+        "# TYPE homelab_cnpg_cluster_backup_configured gauge",
+        "# HELP homelab_cnpg_latest_completed_backup_timestamp Latest completed CNPG backup timestamp by cluster.",
+        "# TYPE homelab_cnpg_latest_completed_backup_timestamp gauge",
+      ])
+      for cluster in cnpg_clusters:
+        meta = cluster.get("metadata", {})
+        if "backup" not in cluster.get("spec", {}):
+          continue
+        labels = {"namespace": meta.get("namespace", ""), "cluster": meta.get("name", "")}
+        lines.append(emit("homelab_cnpg_cluster_backup_configured", labels, 1))
+        backups = get(f"/apis/postgresql.cnpg.io/v1/namespaces/{labels['namespace']}/backups").get("items", [])
+        latest = 0
+        for backup in backups:
+          backup_labels = backup.get("metadata", {}).get("labels", {})
+          if backup_labels.get("cnpg.io/cluster") != labels["cluster"]:
+            continue
+          if str(backup.get("status", {}).get("phase", "")).lower() != "completed":
+            continue
+          latest = max(latest, parse_time(backup.get("status", {}).get("endedAt") or backup.get("metadata", {}).get("creationTimestamp")))
+        lines.append(emit("homelab_cnpg_latest_completed_backup_timestamp", labels, latest))
+
+      longhorn = get("/apis/longhorn.io/v1beta2/namespaces/longhorn-system/backups").get("items", [])
+      lines.extend([
+        "# HELP homelab_longhorn_latest_backup_timestamp Latest Longhorn backup object timestamp.",
+        "# TYPE homelab_longhorn_latest_backup_timestamp gauge",
+      ])
+      latest_longhorn = 0
+      for backup in longhorn:
+        status = backup.get("status", {})
+        latest_longhorn = max(
+          latest_longhorn,
+          parse_time(status.get("backupCreatedAt") or status.get("snapshotCreatedAt") or backup.get("metadata", {}).get("creationTimestamp")),
+        )
+      lines.append(emit("homelab_longhorn_latest_backup_timestamp", {"namespace": "longhorn-system"}, latest_longhorn))
+
+      cronjobs = get("/apis/batch/v1/cronjobs").get("items", [])
+      lines.extend([
+        "# HELP homelab_restore_drill_last_success_timestamp Last successful restore-drill CronJob timestamp.",
+        "# TYPE homelab_restore_drill_last_success_timestamp gauge",
+      ])
+      for cronjob in cronjobs:
+        meta = cronjob.get("metadata", {})
+        name = meta.get("name", "")
+        if "restore-drill" not in name:
+          continue
+        labels = {"namespace": meta.get("namespace", ""), "cronjob": name}
+        lines.append(emit("homelab_restore_drill_last_success_timestamp", labels, parse_time(cronjob.get("status", {}).get("lastSuccessfulTime"))))
+
+      return "\n".join(lines) + "\n"
+
+    class Handler(BaseHTTPRequestHandler):
+      def do_GET(self):
+        if self.path not in ("/metrics", "/"):
+          self.send_response(404)
+          self.end_headers()
+          return
+        try:
+          body = collect().encode("utf-8")
+          self.send_response(200)
+        except Exception as exc:
+          body = f"homelab_backup_observability_up 0\n# error: {exc}\n".encode("utf-8")
+          self.send_response(500)
+        self.send_header("Content-Type", "text/plain; version=0.0.4")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+      def log_message(self, fmt, *args):
+        return
+
+    HTTPServer(("0.0.0.0", 8080), Handler).serve_forever()

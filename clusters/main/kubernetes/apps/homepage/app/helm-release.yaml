@@ -1,0 +1,244 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: homepage
+  namespace: apps
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: homepage
+      version: 12.5.1
+      sourceRef:
+        kind: HelmRepository
+        name: truecharts
+        namespace: flux-system
+      interval: 15m
+  timeout: 20m
+  maxHistory: 3
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    # Ensure changes to values-backed config are applied even if the config PVC
+    # already contains older copies (chart otherwise only copies on first run).
+    forceConfigFromValues: true
+
+    resources:
+      requests:
+        cpu: 25m
+        memory: 128Mi
+      limits:
+        cpu: null
+        memory: 512Mi
+
+    workload:
+      main:
+        podSpec:
+          containers:
+            main:
+              env:
+                HOMEPAGE_ALLOWED_HOSTS: "home.${DOMAIN_0}"
+
+    # Ingress configuration
+    ingress:
+      main:
+        enabled: false
+        ingressClassName: internal
+        integrations:
+          certManager:
+            enabled: true
+            certificateIssuer: domain-0-le-prod
+        hosts:
+          - host: home.${DOMAIN_0}
+            paths:
+              - path: /
+                pathType: Prefix
+    
+    # Configuration storage
+    persistence:
+      config:
+        enabled: true
+        type: pvc
+        size: 1Gi
+        mountPath: /app/config
+
+    configmap:
+      config:
+        enabled: true
+        data:
+          custom.js: ""
+          custom.css: ""
+          kubernetes.yaml: |
+            ---
+            mode: cluster
+          settings.yaml: |
+            title: Home
+            theme: dark
+            color: slate
+            headerStyle: boxed
+            layout:
+              Apps:
+                style: row
+                columns: 3
+              Media:
+                style: row
+                columns: 4
+              Downloads:
+                style: row
+                columns: 3
+              Tools:
+                style: row
+                columns: 3
+              System:
+                style: row
+                columns: 3
+              Network:
+                style: row
+                columns: 3
+              Runbook:
+                style: row
+                columns: 3
+          services.yaml: |
+            - Apps:
+                - Vaultwarden:
+                    href: https://vault.${DOMAIN_0}
+                    description: Password Manager
+                - Obsidian:
+                    href: https://obsidian.${DOMAIN_0}
+                    description: Notes
+                - Paperless:
+                    href: https://paperless.${DOMAIN_0}
+                    description: Document Management
+                - Nextcloud:
+                    href: https://cloud.${DOMAIN_0}
+                    description: Cloud Storage
+                - Code Server:
+                    href: https://code.${DOMAIN_0}
+                    description: VS Code (code-server)
+                - Custom App:
+                    href: https://app.${DOMAIN_0}
+                    description: Your custom app (see apps/custom-app)
+
+            - Tools:
+                - Headlamp:
+                    icon: kubernetes-dashboard.png
+                    href: https://kube.${DOMAIN_0}
+                    description: Kubernetes UI
+                - Authentik:
+                    icon: authentik.png
+                    href: https://auth.${DOMAIN_0}
+                    description: Authentication
+                - Grafana:
+                    icon: si-grafana
+                    href: https://grafana.${DOMAIN_0}
+                    description: Dashboards & Metrics
+                - Alertmanager:
+                    icon: si-prometheus
+                    href: https://alertmanager.${DOMAIN_0}
+                    description: Alerts UI
+                - Prometheus:
+                    icon: si-prometheus
+                    href: https://prometheus.${DOMAIN_0}
+                    description: Metrics UI
+
+            - System:
+                - Registry Catalog:
+                    icon: si-docker
+                    href: https://registry.${DOMAIN_0}/v2/_catalog?n=100
+                    description: Registry repositories (JSON)
+                - mcp-server (tags):
+                    icon: si-docker
+                    href: https://registry.${DOMAIN_0}/v2/mcp-server/tags/list
+                    description: Image tags (JSON)
+                - CouchDB:
+                    icon: si-apachecouchdb
+                    href: https://couchdb.${DOMAIN_0}/_utils/
+                    description: CouchDB (Fauxton)
+
+            - Network:
+                - Omada Controller:
+                    icon: si-tplink
+                    href: https://omada.${DOMAIN_0}
+                    description: Network Controller
+                - OPNSense:
+                    icon: si-opnsense
+                    href: https://opnsense.${DOMAIN_HOST}:4443
+                    description: Firewall / Router
+                - AdGuard Home:
+                    icon: si-adguard
+                    href: https://opnsense.${DOMAIN_HOST}:443
+                    description: DNS UI (AdGuard Home)
+                - TrueNAS:
+                    icon: si-truenas
+                    href: https://truenas.${DOMAIN_HOST}
+                    description: Storage Backend
+
+            - Runbook:
+                - Status:
+                    href: https://status.${DOMAIN_0}
+                    description: Service status (gatus)
+                - Grafana:
+                    href: https://grafana.${DOMAIN_0}
+                    description: Dashboards
+                - Alertmanager:
+                    href: https://alertmanager.${DOMAIN_0}
+                    description: Alerts
+                - Flux:
+                    href: https://github.com/your-username/your-homelab-repo/blob/main/docs/operations.md
+                    description: GitOps operations and logs
+                - Goldilocks:
+                    href: https://goldilocks.${DOMAIN_0}
+                    description: VPA recommendations UI
+                - Ops Docs:
+                    href: https://github.com/your-username/your-homelab-repo/blob/main/docs/operations.md
+                    description: Cluster operations
+                - VolSync Restore:
+                    href: https://github.com/your-username/your-homelab-repo/blob/main/docs/backups-volsync.md
+                    description: PVC restore drill
+                - etcd Restore:
+                    href: https://github.com/your-username/your-homelab-repo/blob/main/docs/etcd-snapshots.md
+                    description: Talos etcd recovery
+          widgets.yaml: |
+            - kubernetes:
+                cluster:
+                  show: true
+                  cpu: true
+                  memory: true
+                  showLabel: true
+                nodes:
+                  show: true
+                  cpu: true
+                  memory: true
+                  showLabel: true
+
+            - resources:
+                backend: resources
+                expanded: true
+                cpu: true
+                memory: true
+
+            - search:
+                provider: google
+                target: _blank
+          bookmarks.yaml: |
+            - Developer:
+                - GitHub:
+                    - icon: github-light.png
+                      href: https://github.com
+                - Flux Docs:
+                    - icon: gitbook.png
+                      href: https://fluxcd.io/flux/
+    
+    # Metrics
+    metrics:
+      main:
+        # Homepage does not expose Prometheus metrics; avoid creating a ServiceMonitor that scrapes the UI.
+        enabled: false
+        type: "servicemonitor"

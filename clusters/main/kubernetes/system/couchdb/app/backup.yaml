@@ -1,0 +1,72 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: couchdb-backup-nfs
+  namespace: couchdb
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: couchdb-backup
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: backup
+            image: curlimages/curl:latest
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - ALL
+              readOnlyRootFilesystem: true
+            command:
+            - /bin/sh
+            - -c
+            - |
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              BACKUP_DIR="/backup/couchdb_$${TIMESTAMP}"
+              mkdir -p "$BACKUP_DIR"
+              
+              # Get list of databases from CouchDB
+              DATABASES=$(curl -s http://admin:$${COUCHDB_ADMIN_PASSWORD}@couchdb:5984/_all_dbs | grep -o '"[^"]*"' | tr -d '"' | grep -v "^_")
+              
+              echo "Starting CouchDB backup at $TIMESTAMP"
+              for DB in $DATABASES; do
+                echo "Backing up database: $DB"
+                curl -s http://admin:$${COUCHDB_ADMIN_PASSWORD}@couchdb:5984/$DB/_all_docs > "$BACKUP_DIR/$${DB}_all_docs.json"
+              done
+              
+              # Create backup manifest
+              echo "Backup completed at $(date)" > "$BACKUP_DIR/manifest.txt"
+              du -sh "$BACKUP_DIR" >> "$BACKUP_DIR/manifest.txt"
+              echo "Backup stored in $BACKUP_DIR"
+            env:
+            - name: COUCHDB_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-credentials
+                  key: admin-password
+            volumeMounts:
+            - name: backup
+              mountPath: /backup
+            - name: tmp
+              mountPath: /tmp
+          volumes:
+          - name: backup
+            persistentVolumeClaim:
+              claimName: couchdb-backup-nfs-pvc
+          - name: tmp
+            emptyDir: {}
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: couchdb-backup
+  namespace: couchdb

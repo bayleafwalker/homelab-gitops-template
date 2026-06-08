@@ -1,0 +1,95 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/helm.toolkit.fluxcd.io/helmrelease_v2.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: collabora
+  namespace: collabora
+spec:
+  interval: 30m
+  timeout: 15m
+  chart:
+    spec:
+      chart: collabora-online
+      version: 1.1.61
+      sourceRef:
+        kind: HelmRepository
+        name: collabora-online
+        namespace: flux-system
+      interval: 30m
+  install:
+    timeout: 15m
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    timeout: 15m
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    securityContext:
+      allowPrivilegeEscalation: true
+      capabilities:
+        add:
+          - SYS_ADMIN
+          - DAC_READ_SEARCH
+          - MKNOD
+      seccompProfile:
+        type: Unconfined
+    collabora:
+      existingSecret:
+        enabled: true
+        secretName: collabora-credentials
+        usernameKey: username
+        passwordKey: password
+      server_name: office.${DOMAIN_0}:443
+      extra_params: >-
+        --o:ssl.enable=false
+        --o:ssl.termination=true
+        --o:net.frame_ancestors=https://cloud.${DOMAIN_0}
+      aliasgroups:
+        - host: https://cloud.${DOMAIN_0}:443
+    ingress:
+      enabled: true
+      className: internal
+      annotations:
+        cert-manager.io/cluster-issuer: domain-0-le-prod
+        nginx.ingress.kubernetes.io/proxy-body-size: "0"
+        nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+        nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+        nginx.ingress.kubernetes.io/proxy-buffering: "off"
+        nginx.ingress.kubernetes.io/upstream-hash-by: "$arg_WOPISrc"
+      hosts:
+        - host: office.${DOMAIN_0}
+          paths:
+            - path: /
+              pathType: ImplementationSpecific
+      tls:
+        - secretName: office-tls
+          hosts:
+            - office.${DOMAIN_0}
+    autoscaling:
+      enabled: false
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 768Mi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: networking.k8s.io
+              version: v1
+              kind: Ingress
+              name: collabora-collabora-online
+            patch: |-
+              $patch: delete
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: collabora-collabora-online

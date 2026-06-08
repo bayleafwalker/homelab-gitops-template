@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: homelab
+spec:
+  serviceSelector:
+    matchLabels:
+      homelab.dev/lb-pool: homelab
+  blocks:
+    # Replace with a free range from your own LAN (must not overlap DHCP).
+    - start: 192.168.1.200
+      stop: 192.168.1.220

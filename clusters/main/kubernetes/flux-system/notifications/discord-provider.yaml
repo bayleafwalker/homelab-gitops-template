@@ -1,0 +1,10 @@
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: discord-seven
+  namespace: flux-system
+spec:
+  type: discord
+  address: "${DISCORD_SEVEN_WEBHOOK_URL}"
+  username: Flux
+

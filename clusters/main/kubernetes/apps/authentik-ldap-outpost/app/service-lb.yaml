@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentik-ldap-outpost-lb
+  namespace: authentik
+spec:
+  type: LoadBalancer
+  # MetalLB pool has `autoAssign: false`, so we must request an IP.
+  loadBalancerIP: ${LDAP_OUTPOST_IP}
+  externalTrafficPolicy: Local
+  loadBalancerSourceRanges:
+    - ${LAN_CIDR}
+    - ${VLAN20_CIDR}
+    - 10.0.0.0/24
+  selector:
+    app: authentik-ldap-outpost
+  ports:
+    - name: ldap
+      port: 389
+      protocol: TCP
+      targetPort: 3389
+    - name: ldaps
+      port: 636
+      protocol: TCP
+      targetPort: 6636

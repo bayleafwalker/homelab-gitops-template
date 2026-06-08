@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: docker-registry
+spec:
+  serviceSelector:
+    matchLabels:
+      app: docker-registry
+      registry-role: lb
+  blocks:
+    - start: ${REGISTRY_IP}
+      stop: ${REGISTRY_IP}

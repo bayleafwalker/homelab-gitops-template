@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: volsync-restic-authentik-data
+  namespace: authentik
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: ${HETZNER_ACCESS_KEY}
+  AWS_SECRET_ACCESS_KEY: ${HETZNER_SECRET_KEY}
+  RESTIC_PASSWORD: ${VOLSYNC_RESTIC_PASSWORD}
+  RESTIC_REPOSITORY: s3:https://${HETZNER_S3_BUCKET_ENDPOINT}/${HETZNER_S3_BUCKET_NAME}/volsync/authentik/authentik-data
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: authentik-data
+  namespace: authentik
+spec:
+  sourcePVC: authentik-data
+  trigger:
+    schedule: "02 3 * * *"
+  restic:
+    moverSecurityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+    repository: volsync-restic-authentik-data
+    copyMethod: Snapshot
+    pruneIntervalDays: 7
+    retain:
+      daily: 7
+      weekly: 4
+      monthly: 3
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationDestination
+metadata:
+  name: authentik-data-restore-drill
+  namespace: authentik
+spec:
+  trigger:
+    schedule: "20 5 1 * *"
+  restic:
+    repository: volsync-restic-authentik-data
+    copyMethod: None
+    cleanupTempPVC: true
+    cleanupCachePVC: true
+    storageClassName: longhorn
+    accessModes:
+      - ReadWriteOnce
+    capacity: 5Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: volsync-restic-authentik-media
+  namespace: authentik
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: ${HETZNER_ACCESS_KEY}
+  AWS_SECRET_ACCESS_KEY: ${HETZNER_SECRET_KEY}
+  RESTIC_PASSWORD: ${VOLSYNC_RESTIC_PASSWORD}
+  RESTIC_REPOSITORY: s3:https://${HETZNER_S3_BUCKET_ENDPOINT}/${HETZNER_S3_BUCKET_NAME}/volsync/authentik/authentik-media
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: authentik-media
+  namespace: authentik
+spec:
+  sourcePVC: authentik-media
+  trigger:
+    schedule: "32 3 * * 0"
+  restic:
+    moverSecurityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+    repository: volsync-restic-authentik-media
+    copyMethod: Snapshot
+    pruneIntervalDays: 14
+    retain:
+      daily: 7
+      weekly: 4
+      monthly: 3

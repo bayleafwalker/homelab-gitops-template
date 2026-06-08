@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: blocky
+    labels:
+        goldilocks.fairwinds.com/enabled: "true"
+        topolvm.io/webhook: ignore

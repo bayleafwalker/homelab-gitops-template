@@ -1,0 +1,27 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-egress-cilium-gateway
+  namespace: gatus
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: gatus
+      app.kubernetes.io/name: gatus
+  egress:
+    - toCIDRSet:
+        - cidr: ${GATEWAY_INTERNAL_IP}/32
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+    # The Cilium Gateway API dataplane runs as hostNetwork Envoy and is represented
+    # by the reserved "host"/"remote-node" identities. Without this, requests to the
+    # Gateway LB IP can be denied even when port 443 is allowed to "world".
+    - toEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

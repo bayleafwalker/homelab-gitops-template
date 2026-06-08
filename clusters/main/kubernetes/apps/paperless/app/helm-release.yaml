@@ -1,0 +1,105 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: paperless
+  namespace: paperless
+spec:
+  interval: 15m
+  chart:
+    spec:
+      chart: paperless-ngx
+      version: 14.8.0
+      sourceRef:
+        kind: HelmRepository
+        name: truecharts
+        namespace: flux-system
+      interval: 15m
+  timeout: 20m
+  maxHistory: 3
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  values:
+    credentials:
+      hetzner-s3:
+        type: s3
+        url: https://${HETZNER_S3_BUCKET_ENDPOINT}
+        bucket: ${HETZNER_S3_BUCKET_NAME}
+        path: backups
+    # CNPG
+    cnpg:
+      main:
+        enabled: true
+        backups:
+          enabled: true
+          credentials: hetzner-s3
+    redis:
+      enabled: true
+    # Ingress
+    ingress:
+      main:
+        enabled: false
+    # Persistence
+    persistence:
+      data:
+        enabled: true
+        existingClaim: paperless-data-nfs-pvc
+        subPath: data
+      media:
+        enabled: false
+    # App Config
+    env:
+      PAPERLESS_URL: https://paperless.${DOMAIN_0}
+      PAPERLESS_TIME_ZONE: UTC
+      PAPERLESS_DATA_DIR: /usr/src/paperless/data
+      PAPERLESS_MEDIA_ROOT: /usr/src/paperless/data/media
+    # Pod Placement
+    podAnnotations:
+      truecharts.org/pvc: "true"
+    workload:
+      main:
+        replicas: 1
+
+  valuesFrom:
+    - kind: Secret
+      name: hetzner-s3
+      valuesKey: accessKey
+      targetPath: credentials.hetzner-s3.accessKey
+    - kind: Secret
+      name: hetzner-s3
+      valuesKey: secretKey
+      targetPath: credentials.hetzner-s3.secretKey
+    - kind: Secret
+      name: hetzner-s3
+      valuesKey: encrKey
+      targetPath: credentials.hetzner-s3.encrKey
+
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              group: postgresql.cnpg.io
+              kind: Cluster
+              name: paperless-paperless-ngx-cnpg-main
+            patch: |-
+              - op: replace
+                path: /spec/bootstrap
+                value:
+                  initdb:
+                    database: app
+                    owner: app
+          - target:
+              version: v1
+              kind: Secret
+              name: paperless-paperless-ngx-cnpg-main-user
+            patch: |-
+              - op: add
+                path: /stringData
+                value:
+                  username: app

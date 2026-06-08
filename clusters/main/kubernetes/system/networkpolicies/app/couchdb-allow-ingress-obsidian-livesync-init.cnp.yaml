@@ -1,0 +1,19 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-obsidian-livesync-init-couchdb
+  namespace: couchdb
+spec:
+  endpointSelector:
+    matchLabels:
+      app: couchdb
+      release: couchdb
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: couchdb
+            k8s:app.kubernetes.io/name: obsidian-livesync-init
+      toPorts:
+        - ports:
+            - port: "5984"
+              protocol: TCP

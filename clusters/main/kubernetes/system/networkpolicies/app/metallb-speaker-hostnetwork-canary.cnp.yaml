@@ -1,0 +1,60 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: metallb-speaker-hostnetwork-canary
+  namespace: metallb
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/component: speaker
+      app.kubernetes.io/instance: metallb
+      app.kubernetes.io/name: metallb
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "7946"
+              protocol: TCP
+            - port: "7946"
+              protocol: UDP
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-prometheus-stack
+      toPorts:
+        - ports:
+            - port: "7472"
+              protocol: TCP
+            - port: "7473"
+              protocol: TCP
+  egress:
+    - toEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "6443"
+              protocol: TCP
+            - port: "7946"
+              protocol: TCP
+            - port: "7946"
+              protocol: UDP
+    - toCIDRSet:
+        - cidr: 172.17.0.1/32
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "6443"
+              protocol: TCP
+    - toCIDRSet:
+        - cidr: 0.0.0.0/0
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP

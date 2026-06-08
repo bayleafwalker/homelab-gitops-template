@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vscode-mcp-settings
+  namespace: vscode
+data:
+  settings.json: |
+    {
+      "mcp.servers": {
+        "cluster-manager": {
+          "command": "node",
+          "args": ["/app/dist/index.js"],
+          "env": {
+            "MCP_CONFIG_FILE": "/etc/mcp/config/config.json",
+            "LOG_LEVEL": "info"
+          }
+        }
+      }
+    }

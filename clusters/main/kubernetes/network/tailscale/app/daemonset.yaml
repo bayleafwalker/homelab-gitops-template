@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: tailscale
+  namespace: tailscale
+  labels:
+    app.kubernetes.io/name: tailscale
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tailscale
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tailscale
+    spec:
+      serviceAccountName: tailscale
+      hostNetwork: true
+      dnsPolicy: Default
+      hostAliases:
+        - ip: 172.17.0.1
+          hostnames:
+            - kubernetes.default.svc
+            - kubernetes.default.svc.cluster.local
+            - kubernetes
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
+                  - key: node-role.kubernetes.io/master
+                    operator: DoesNotExist
+      volumes:
+        - name: run
+          emptyDir: {}
+        - name: var
+          emptyDir: {}
+        - name: dev-net-tun
+          hostPath:
+            path: /dev/net/tun
+            type: CharDevice
+      containers:
+        - name: tailscaled
+          image: tailscale/tailscale:v1.72.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+                - NET_RAW
+            runAsUser: 0
+          env:
+            - name: TS_STATE_DIR
+              value: /var/lib/tailscale
+            - name: TS_SOCKET
+              value: /run/tailscale/tailscaled.sock
+          volumeMounts:
+            - name: run
+              mountPath: /run/tailscale
+            - name: var
+              mountPath: /var/lib/tailscale
+            - name: dev-net-tun
+              mountPath: /dev/net/tun
+          args:
+            - /bin/sh
+            - -c
+            - |
+              tailscaled \
+                --state=kube:tailscale-state \
+                --socket=/run/tailscale/tailscaled.sock \
+                --statedir=/var/lib/tailscale
+        - name: tailscale
+          image: tailscale/tailscale:v1.72.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+          env:
+            - name: TAILSCALE_AUTHKEY
+              valueFrom:
+                secretKeyRef:
+                  name: tailscale-auth
+                  key: TAILSCALE_AUTHKEY
+            - name: TS_SOCKET
+              value: /run/tailscale/tailscaled.sock
+            - name: TS_STATE_DIR
+              value: /var/lib/tailscale
+            - name: TS_EXTRA_ARGS
+              value: "--accept-dns=false --accept-routes=true"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: run
+              mountPath: /run/tailscale
+            - name: var
+              mountPath: /var/lib/tailscale
+          args:
+            - /bin/sh
+            - -c
+            - |
+              tailscale --socket=/run/tailscale/tailscaled.sock up \
+                --authkey="$TAILSCALE_AUTHKEY" \
+                --hostname="$NODE_NAME-homelab" \
+                $TS_EXTRA_ARGS && \
+              sleep infinity

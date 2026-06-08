@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: blocky
+spec:
+  serviceSelector:
+    matchLabels:
+      app.kubernetes.io/name: blocky
+      service.name: dns
+  blocks:
+    - start: ${BLOCKY_IP}
+      stop: ${BLOCKY_IP}

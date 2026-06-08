@@ -1,0 +1,139 @@
+---
+# TrueNAS RWX StorageClass - shared storage for multi-pod access
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: truenas-rwx
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: Immediate
+---
+# PersistentVolume for TrueNAS weave dataset
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: truenas-weave-pv
+spec:
+  storageClassName: truenas-rwx
+  capacity:
+    storage: 1Mi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: truenas.${DOMAIN_HOST}
+    path: /mnt/storage_layer/weave/rwx
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+    - tcp
+---
+# PersistentVolume for TrueNAS projects dataset (code-server workspace + home)
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: truenas-workspace-pv
+spec:
+  storageClassName: truenas-rwx
+  capacity:
+    storage: 1Mi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: truenas.${DOMAIN_HOST}
+    path: /mnt/storage_layer/projects
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+    - tcp
+  claimRef:
+    namespace: vscode
+    name: truenas-workspace-pvc
+---
+# PersistentVolumeClaim for code-server workspace
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: truenas-workspace-pvc
+  namespace: vscode
+spec:
+  storageClassName: truenas-rwx
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
+---
+# PersistentVolume for Paperless-ngx data (subdirectory: paperless)
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: truenas-paperless-pv
+spec:
+  storageClassName: truenas-rwx
+  capacity:
+    storage: 1Mi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: truenas.${DOMAIN_HOST}
+    path: /mnt/storage_layer/weave/rwx/paperless
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+    - tcp
+  claimRef:
+    namespace: paperless-ngx
+    name: truenas-paperless-pvc
+---
+# PersistentVolumeClaim for Paperless-ngx
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: truenas-paperless-pvc
+  namespace: paperless-ngx
+spec:
+  storageClassName: truenas-rwx
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
+---
+# PersistentVolume for Nextcloud data (subdirectory: nextcloud)
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: truenas-nextcloud-pv
+spec:
+  storageClassName: truenas-rwx
+  capacity:
+    storage: 1Mi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: truenas.${DOMAIN_HOST}
+    path: /mnt/storage_layer/weave/rwx/nextcloud
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+    - tcp
+  claimRef:
+    namespace: nextcloud
+    name: truenas-nextcloud-pvc
+---
+# PersistentVolumeClaim for Nextcloud
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: truenas-nextcloud-pvc
+  namespace: nextcloud
+spec:
+  storageClassName: truenas-rwx
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi

@@ -1,0 +1,74 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-paperless-httproute-to-authentik-http
+  namespace: authentik
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: paperless
+  to:
+    - group: ""
+      kind: Service
+      name: authentik-http
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-headlamp-httproute-to-authentik-http
+  namespace: authentik
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: headlamp
+  to:
+    - group: ""
+      kind: Service
+      name: authentik-http
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-vscode-httproute-to-authentik-http
+  namespace: authentik
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: vscode
+  to:
+    - group: ""
+      kind: Service
+      name: authentik-http
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-goldilocks-httproute-to-authentik-http
+  namespace: authentik
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: goldilocks
+  to:
+    - group: ""
+      kind: Service
+      name: authentik-http
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-kube-prometheus-stack-httproute-to-authentik-http
+  namespace: authentik
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: kube-prometheus-stack
+  to:
+    - group: ""
+      kind: Service
+      name: authentik-http

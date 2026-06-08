@@ -1,0 +1,96 @@
+# Sample only — fill in your own values, then encrypt with sops before
+# committing (`.sops.yaml` already enforces age encryption for this path).
+# This file feeds `${VARIABLE}` substitutions in `talconfig.yaml` when you
+# run `talhelper genconfig` / `clustertool genconfig` to build Talos machine
+# configs. Never commit it in plaintext — it carries node MAC addresses,
+# domain credentials and API tokens alongside the network layout.
+## The Following are required by ClusterTool and CANNOT be removed
+# Ensure VIP is different from all master IPs
+VIP: 192.168.1.10
+## Defines the MasterNode IPs
+## MASTER1IP has to be set
+MASTER1IP: 192.168.1.11
+MASTER2IP: 192.168.1.12
+MASTER2IP_IP: 192.168.1.12
+MASTER2IP_CIDR: 192.168.1.12/24
+MASTER2_MAC: "00:11:22:33:44:52"
+MASTER3IP: 192.168.1.13
+MASTER3IP_IP: 192.168.1.13
+MASTER3IP_CIDR: 192.168.1.13/24
+MASTER3_MAC: "00:11:22:33:44:53"
+MASTER4IP_IP: 192.168.1.14
+MASTER4IP_CIDR: 192.168.1.14/24
+MASTER4_MAC: "00:11:22:33:44:54"
+WORKER2IP: 192.168.1.62
+WORKER3IP: 192.168.1.63
+WORKERGPU1IP: 192.168.1.51
+# Defines the gateway for all nodes
+GATEWAY: 192.168.1.1
+VLAN20_GATEWAY: 192.168.1.1
+VLAN20_CIDR: 192.168.1.0/24
+# Defines the ip range metallb is allowed to use
+METALLB_RANGE: 192.168.1.200-192.168.1.220
+# IP Blocky DNS will be exposed on
+BLOCKY_IP: 192.168.1.205
+OMADA_IP: 192.168.1.206
+## Configures Traefik, ClusterIssuer and Blocky for said domain, using these credentials
+# domain is the base/highest level of your domain, so without subdomain, example: truecharts.org, not somesite.truecharts.org
+# To disable, please see the comments in their respective helm-values.yaml files!
+# When disabled, please use placeholder values instead.
+DOMAIN_0: apps.example.com
+DOMAIN_0_EMAIL: you@example.com
+DOMAIN_0_CLOUDFLARE_TOKEN: REPLACE_WITH_CLOUDFLARE_API_TOKEN
+TAILSCALE_AUTHKEY: REPLACE_WITH_TAILSCALE_AUTH_KEY
+# Used to automatically generate a sshkey-pair for FluxCD
+# Has to start with ssh://
+# Please make sure to NOT contain any special characters in the URL except "-"
+GITHUB_REPOSITORY: git@github.com:your-username/your-homelab-repo.git
+AK_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+LLDAP_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+LDAP_OUTPOST_TOKEN: REPLACE_WITH_AUTHENTIK_OUTPOST_TOKEN
+CODE_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+COUCHDB_ADMIN_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+DC_0: example
+DC_1: com
+DN: dc=example, dc=com
+NORDVPN_USER: REPLACE_WITH_VPN_USERNAME
+NORDVPN_PASSWORD: REPLACE_WITH_VPN_PASSWORD
+# or your preferred country
+NORDVPN_COUNTRY: Switzerland
+# or your preferred server
+NORDVPN_SERVER: ch000.nordvpn.com
+NORDVPN_WIREGUARD_PRIVATE_KEY: REPLACE_WITH_WIREGUARD_PRIVATE_KEY
+NORDVPN_WIREGUARD_PUBLIC_KEY: REPLACE_WITH_WIREGUARD_PUBLIC_KEY
+HETZNER_ACCESS_KEY: REPLACE_WITH_HETZNER_ACCESS_KEY
+HETZNER_SECRET_KEY: REPLACE_WITH_HETZNER_SECRET_KEY
+HETZNER_S3_BUCKET_NAME: your-bucket-name
+HETZNER_S3_BUCKET_ENDPOINT: hel1.your-objectstorage.com
+HETZNER_API_TOKEN: REPLACE_WITH_HETZNER_API_TOKEN
+DISCORD_SEVEN_WEBHOOK_URL: https://discord.com/api/webhooks/REPLACE_WITH_WEBHOOK_ID/REPLACE_WITH_WEBHOOK_TOKEN
+MOSQUITTO_USERNAME: homelab_mosquitto
+MOSQUITTO_PASSWORD: REPLACE_WITH_RANDOM_PASSWORD
+HOMEASSISTANT_URL: homeassistant.example.com
+HOMEASSISTANT_USERNAME: bot
+HOMEASSISTANT_TOKEN: REPLACE_WITH_HOMEASSISTANT_LONG_LIVED_TOKEN
+## Uncomment and adapt to automatically setup your dockerhub credentials
+## This should prevent much of the potential ratelimits
+# DOCKERHUB_USER: dockerhub-username
+# DOCKERHUB_PASSWORD: dockerhub-password
+## DO NOT ALTER
+PODNET: 172.16.0.0/16
+SVCNET: 172.17.0.0/16
+TRUENAS_IP: 192.168.1.33
+DOMAIN_HOST: example.com
+GATEWAY_INTERNAL_IP: 192.168.1.219
+SHELL_IP: 192.168.1.217
+REGISTRY_IP: 192.168.1.221
+FORGEJO_SSH_IP: 192.168.1.218
+LDAP_OUTPOST_IP: 192.168.1.216
+POSTGRES_LB_IP: 192.168.1.220
+LAN_CIDR: 192.168.1.0/24
+HOMELAB_API_VIP: 192.168.1.10
+HOMELAB_METALLB_RANGE: 192.168.1.200-192.168.1.220
+HOMELAB_LB_START: 192.168.1.200
+HOMELAB_LB_STOP: 192.168.1.220
+## Headlamp IP has to be set
+HEADLAMP_IP: 192.168.1.215

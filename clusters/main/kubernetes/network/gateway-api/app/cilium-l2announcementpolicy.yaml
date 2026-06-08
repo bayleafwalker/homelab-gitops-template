@@ -1,0 +1,21 @@
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: gateway-internal
+spec:
+  loadBalancerIPs: true
+  nodeSelector:
+    matchExpressions:
+      - key: kubernetes.io/hostname
+        operator: In
+        values:
+          - k8s-control-2
+          - k8s-control-3
+          - k8s-control-4
+          - k8s-worker-gpu-1
+          - k8s-worker-2
+          - k8s-worker-3
+  serviceSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: internal
+      io.cilium.gateway/owning-gateway: internal

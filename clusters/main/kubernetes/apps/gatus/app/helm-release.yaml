@@ -1,0 +1,55 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/bjw-s/helm-charts/main/charts/other/app-template/schemas/helmrelease-helm-v2.schema.json
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: gatus
+  namespace: gatus
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: app-template
+      version: 5.0.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      strategy: rollback
+      retries: 3
+  values:
+    controllers:
+      gatus:
+        pod:
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          # Cluster DNS is required for direct service checks via *.svc.cluster.local.
+          dnsPolicy: ClusterFirst
+        containers:
+          app:
+            image:
+              repository: ghcr.io/twin/gatus
+              tag: v5.36.0@sha256:c5f210d095fa78e6efaa20ffeb14803f2ba4f10615e16a6d12087697149617f0
+            env:
+              GATUS_CONFIG_PATH: /config/config.yaml
+    service:
+      app:
+        controller: gatus
+        ports:
+          http:
+            port: 8080
+    ingress:
+      app:
+        enabled: false
+    persistence:
+      config:
+        type: configMap
+        name: gatus-config
+        globalMounts:
+          - path: /config

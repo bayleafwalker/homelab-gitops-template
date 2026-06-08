@@ -1,0 +1,269 @@
+clusterName: ${CLUSTERNAME}
+# renovate: datasource=docker depName=siderolabs/installer repository=https://ghcr.io
+talosVersion: v1.13.3
+# renovate-disabled: datasource=docker depName=ghcr.io/siderolabs/kubelet
+kubernetesVersion: v1.36.1
+endpoint: https://${HOMELAB_API_VIP}:6443
+allowSchedulingOnControlPlanes: false
+additionalMachineCertSans:
+    - 127.0.0.1
+    - ${VIP}
+    - ${HOMELAB_API_VIP}
+additionalApiServerCertSans:
+    - 127.0.0.1
+    - ${VIP}
+    - ${HOMELAB_API_VIP}
+# Warning: Also used in Cilium CNI values!
+clusterPodNets:
+    - ${PODNET}
+clusterSvcNets:
+    - ${SVCNET}
+cniConfig:
+    name: none
+patches:
+    - '@./patches/all.yaml'
+    - '@./patches/registry.yaml'
+nodes:
+    - hostname: k8s-control-2
+      ipAddress: ${MASTER2IP_IP}
+      controlPlane: true
+      nameservers:
+        - ${VLAN20_GATEWAY}
+      installDiskSelector:
+        size: <= 160GB
+      networkInterfaces:
+        # suffix is the adapter mac adres.
+        - deviceSelector:
+            hardwareAddr: "${MASTER2_MAC}"
+          dhcp: true
+          vip:
+            ip: ${HOMELAB_API_VIP}
+      schematic:
+        customization:
+            systemExtensions:
+                officialExtensions:
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+      #              - siderolabs/qemu-guest-agent
+    - hostname: k8s-control-3
+      ipAddress: ${MASTER3IP_IP}
+      controlPlane: true
+      nameservers:
+        - ${VLAN20_GATEWAY}
+      installDiskSelector:
+        size: <= 160GB
+      networkInterfaces:
+        # suffix is the adapter mac adres.
+        - deviceSelector:
+            hardwareAddr: "${MASTER3_MAC}"
+          dhcp: true
+          vip:
+            ip: ${HOMELAB_API_VIP}
+      schematic:
+        customization:
+            systemExtensions:
+                officialExtensions:
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+      #              - siderolabs/qemu-guest-agent
+    - hostname: k8s-control-4
+      ipAddress: ${MASTER4IP_IP}
+      controlPlane: true
+      nameservers:
+        - ${VLAN20_GATEWAY}
+      installDiskSelector:
+        size: <= 300GB
+        type: ssd
+      networkInterfaces:
+        # suffix is the adapter mac adres.
+        - deviceSelector:
+            hardwareAddr: "${MASTER4_MAC}"
+          dhcp: true
+          vip:
+            ip: ${HOMELAB_API_VIP}
+      schematic:
+        customization:
+            systemExtensions:
+                officialExtensions:
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+      #              - siderolabs/qemu-guest-agent
+    - hostname: k8s-worker-gpu-1
+      ipAddress: ${WORKERGPU1IP}
+      nameservers:
+        - ${VLAN20_GATEWAY}
+      installDiskSelector:
+        size: <= 300GB
+        type: ssd
+      userVolumes:
+        - name: longhorn
+          provisioning:
+            diskSelector:
+              match: disk.size > 400000000000u && disk.size < 600000000000u
+            grow: true
+            minSize: 200GiB
+            maxSize: 500GiB
+          filesystem:
+            type: xfs
+      patches:
+        - '@./patches/worker-gpu1-nodeip.yaml'
+        - '@./patches/worker-gpu1-labels.yaml'
+        - '@./patches/nvidia.yaml'
+        - '@./patches/coral.yaml'
+        - '@./patches/storage-mounts.yaml'
+      schematic:
+        customization:
+            systemExtensions:
+                officialExtensions:
+                    - siderolabs/nonfree-kmod-nvidia-lts
+                    - siderolabs/nvidia-container-toolkit-lts
+                    - siderolabs/gasket-driver
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+    - hostname: k8s-worker-2
+      ipAddress: ${WORKER2IP}
+      nameservers:
+        - ${VLAN20_GATEWAY}
+      installDiskSelector:
+        size: <= 300GB
+      userVolumes:
+        - name: longhorn
+          provisioning:
+            diskSelector:
+              # Select the larger data disk, avoid relying on serial.
+              # Match by size range (bytes). Tune if you add more large disks.
+              match: disk.size > 300000000000u && disk.size < 900000000000u
+            grow: true
+            # clustertool genconfig requires at least one of minSize/maxSize.
+            # These bounds are for the resulting partition/volume.
+            minSize: 200GiB
+            maxSize: 900GiB
+          filesystem:
+            type: xfs
+      patches:
+        - '@./patches/worker2-nodeip.yaml'
+        - '@./patches/storage-mounts.yaml'
+      schematic:
+        customization:
+            systemExtensions:
+                officialExtensions:
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+      #             - siderolabs/qemu-guest-agent
+    - hostname: k8s-worker-3
+      ipAddress: ${WORKER3IP}
+      nameservers:
+        - ${VLAN20_GATEWAY}
+      installDiskSelector:
+        size: <= 300GB
+      userVolumes:
+        - name: longhorn
+          provisioning:
+            diskSelector:
+              # Select the larger data disk, avoid relying on serial.
+              # Match by size range (bytes). Tune if you add more large disks.
+              match: disk.size > 300000000000u && disk.size < 900000000000u
+            grow: true
+            # clustertool genconfig requires at least one of minSize/maxSize.
+            # These bounds are for the resulting partition/volume.
+            minSize: 200GiB
+            maxSize: 900GiB
+          filesystem:
+            type: xfs
+      patches:
+        - '@./patches/worker3-nodeip.yaml'
+        - '@./patches/storage-mounts.yaml'
+      schematic:
+        customization:
+            systemExtensions:
+                officialExtensions:
+                #    - siderolabs/nonfree-kmod-nvidia-lts
+                #    - siderolabs/nvidia-container-toolkit-lts
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+controlPlane:
+    patches:
+        - '@./patches/controlplane.yaml'
+        - '@./patches/storage-mounts.yaml'
+    kernelModules:
+    - name: nvme_tcp
+    - name: vfio_pci
+    - name: uio_pci_generic
+    schematic:
+        customization:
+            extraKernelArgs:
+                - net.ifnames=0
+            systemExtensions:
+                officialExtensions:
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+                    #- siderolabs/qemu-guest-agent
+    machineFiles:
+    - content: |
+        [plugins."io.containerd.grpc.v1.cri"]
+          enable_unprivileged_ports = true
+          enable_unprivileged_icmp = true
+        [plugins."io.containerd.grpc.v1.cri".containerd]
+          discard_unpacked_layers = false
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+          discard_unpacked_layers = false
+      permissions: 0
+      path: /etc/cri/conf.d/20-customization.part
+      op: create
+    - content: |
+        [ NFSMount_Global_Options ]
+        nfsvers=4.2
+        hard=True
+        noatime=True
+        nodiratime=True
+        rsize=131072
+        wsize=131072
+        nconnect=8
+      permissions: 420
+      path: /etc/nfsmount.conf
+      op: overwrite
+worker:
+    patches:
+        - '@./patches/worker.yaml'
+    kernelModules:
+    - name: nvme_tcp
+    - name: vfio_pci
+    - name: uio_pci_generic
+    schematic:
+        customization:
+            systemExtensions:
+                officialExtensions:
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+                    #- siderolabs/qemu-guest-agent
+    machineFiles:
+    - content: |
+        [plugins."io.containerd.grpc.v1.cri"]
+          enable_unprivileged_ports = true
+          enable_unprivileged_icmp = true
+        [plugins."io.containerd.grpc.v1.cri".containerd]
+          discard_unpacked_layers = false
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+          discard_unpacked_layers = false
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+          privileged_without_host_devices = false
+          runtime_engine = ""
+          runtime_root = ""
+          runtime_type = "io.containerd.runc.v2"
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+        BinaryName = "/usr/local/bin/nvidia-container-runtime"
+      permissions: 0
+      path: /etc/cri/conf.d/20-customization.part
+      op: create
+    - content: |
+        [ NFSMount_Global_Options ]
+        nfsvers=4.2
+        hard=True
+        noatime=True
+        nodiratime=True
+        rsize=131072
+        wsize=131072
+        nconnect=8
+      permissions: 420
+      path: /etc/nfsmount.conf
+      op: overwrite

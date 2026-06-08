@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: ingress-hosts
+  namespace: kube-prometheus-stack
+spec:
+  interval: 30s
+  scrapeTimeout: 10s
+  jobName: blackbox-ingress
+  module: https_ingress
+  prober:
+    url: blackbox-exporter-prometheus-blackbox-exporter.kube-prometheus-stack.svc.cluster.local:9115
+    path: /probe
+  targets:
+    ingress:
+      namespaceSelector:
+        any: true
+      selector: {}
+      relabelingConfigs:
+        - targetLabel: monitoring
+          replacement: blackbox

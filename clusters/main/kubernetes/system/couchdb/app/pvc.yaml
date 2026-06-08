@@ -1,0 +1,37 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: couchdb-backup-nfs
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: couchdb-backup-nfs-pv
+spec:
+  storageClassName: couchdb-backup-nfs
+  capacity:
+    storage: 1Mi
+  accessModes: [ReadWriteMany]
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    server: truenas.${DOMAIN_HOST}
+    path: /mnt/storage_layer/weave
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+    - tcp
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: couchdb-backup-nfs-pvc
+  namespace: couchdb
+spec:
+  storageClassName: couchdb-backup-nfs
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 1Mi

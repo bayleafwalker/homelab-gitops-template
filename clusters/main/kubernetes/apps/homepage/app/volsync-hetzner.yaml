@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: volsync-restic-homepage-config
+  namespace: apps
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: ${HETZNER_ACCESS_KEY}
+  AWS_SECRET_ACCESS_KEY: ${HETZNER_SECRET_KEY}
+  RESTIC_PASSWORD: ${VOLSYNC_RESTIC_PASSWORD}
+  RESTIC_REPOSITORY: s3:https://${HETZNER_S3_BUCKET_ENDPOINT}/${HETZNER_S3_BUCKET_NAME}/volsync/apps/homepage-config
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: homepage-config
+  namespace: apps
+spec:
+  sourcePVC: homepage-config
+  trigger:
+    schedule: "12 3 * * *"
+  restic:
+    moverSecurityContext:
+      runAsUser: 568
+      runAsGroup: 568
+    repository: volsync-restic-homepage-config
+    copyMethod: Snapshot
+    pruneIntervalDays: 7
+    retain:
+      daily: 7
+      weekly: 4
+      monthly: 3
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationDestination
+metadata:
+  name: homepage-config-restore-drill
+  namespace: apps
+spec:
+  trigger:
+    schedule: "10 5 1 * *"
+  restic:
+    repository: volsync-restic-homepage-config
+    copyMethod: None
+    cleanupTempPVC: true
+    cleanupCachePVC: true
+    storageClassName: longhorn
+    accessModes:
+      - ReadWriteOnce
+    capacity: 1Gi

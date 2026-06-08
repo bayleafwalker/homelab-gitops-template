@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: volsync-restic-vaultwarden-data
+  namespace: vaultwarden
+type: Opaque
+stringData:
+  AWS_ACCESS_KEY_ID: ${HETZNER_ACCESS_KEY}
+  AWS_SECRET_ACCESS_KEY: ${HETZNER_SECRET_KEY}
+  RESTIC_PASSWORD: ${VOLSYNC_RESTIC_PASSWORD}
+  RESTIC_REPOSITORY: s3:https://${HETZNER_S3_BUCKET_ENDPOINT}/${HETZNER_S3_BUCKET_NAME}/volsync/vaultwarden/vaultwarden-data
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationSource
+metadata:
+  name: vaultwarden-data
+  namespace: vaultwarden
+spec:
+  sourcePVC: vaultwarden-data
+  trigger:
+    schedule: "32 3 * * *"
+  restic:
+    moverSecurityContext:
+      runAsUser: 568
+      runAsGroup: 568
+    repository: volsync-restic-vaultwarden-data
+    copyMethod: Snapshot
+    pruneIntervalDays: 7
+    retain:
+      daily: 7
+      weekly: 4
+      monthly: 3
+---
+apiVersion: volsync.backube/v1alpha1
+kind: ReplicationDestination
+metadata:
+  name: vaultwarden-data-restore-drill
+  namespace: vaultwarden
+spec:
+  trigger:
+    schedule: "30 5 1 * *"
+  restic:
+    repository: volsync-restic-vaultwarden-data
+    copyMethod: None
+    cleanupTempPVC: true
+    cleanupCachePVC: true
+    storageClassName: longhorn
+    accessModes:
+      - ReadWriteOnce
+    capacity: 10Gi

@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gatus-config
+  namespace: gatus
+data:
+  config.yaml: |
+    ui:
+      title: Status
+      header: homelab
+
+    endpoints:
+      - name: Home Internal
+        group: Apps Internal
+        url: http://homepage.apps.svc.cluster.local:10352/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Authentik Internal
+        group: Apps Internal
+        url: http://authentik-http.authentik.svc.cluster.local:10230/
+        interval: 1m
+        conditions:
+          - "[STATUS] == any(200, 302)"
+
+      - name: Nextcloud Internal
+        group: Apps Internal
+        url: http://nextcloud.nextcloud.svc.cluster.local:8080/status.php
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Paperless Internal
+        group: Apps Internal
+        url: http://paperless-paperless-ngx.paperless.svc.cluster.local:10140/
+        interval: 1m
+        conditions:
+          - "[STATUS] == any(200, 302)"
+
+      - name: Obsidian Internal
+        group: Apps Internal
+        url: http://obsidian.obsidian.svc.cluster.local:10292/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Custom App Internal
+        group: Apps Internal
+        url: http://custom-app.custom-app.svc.cluster.local:8080/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Vaultwarden Internal
+        group: Apps Internal
+        url: http://vaultwarden.vaultwarden.svc.cluster.local:10102/alive
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Code Server Internal
+        group: Apps Internal
+        url: http://vscode-code-server.vscode.svc.cluster.local:8443/healthz
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Grafana Internal
+        group: Tools Internal
+        url: http://kube-prometheus-stack-grafana.kube-prometheus-stack.svc.cluster.local/api/health
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Prometheus Internal
+        group: Tools Internal
+        url: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc.cluster.local:9090/-/ready
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Alertmanager Internal
+        group: Tools Internal
+        url: http://kube-prometheus-stack-alertmanager.kube-prometheus-stack.svc.cluster.local:9093/-/ready
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Headlamp Internal
+        group: Tools Internal
+        url: http://headlamp.headlamp.svc.cluster.local:4466/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Registry Internal
+        group: System Internal
+        url: http://docker-registry.registry.svc.cluster.local:5000/v2/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: CouchDB Internal
+        group: System Internal
+        url: http://couchdb-svc-couchdb.couchdb.svc.cluster.local:5984/_up
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Omada Internal
+        group: Network Internal
+        url: http://omada-gateway-proxy.omada-controller.svc.cluster.local:8080/
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"

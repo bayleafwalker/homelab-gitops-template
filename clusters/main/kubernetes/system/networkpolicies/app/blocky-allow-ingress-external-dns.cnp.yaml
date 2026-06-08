@@ -1,0 +1,28 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-external-dns
+  namespace: blocky
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: blocky
+      app.kubernetes.io/name: blocky
+      pod.name: main
+  ingress:
+    - fromEntities:
+        - world
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+            - port: "853"
+              protocol: TCP
+            - port: "4443"
+              protocol: TCP
+            - port: "5353"
+              protocol: UDP

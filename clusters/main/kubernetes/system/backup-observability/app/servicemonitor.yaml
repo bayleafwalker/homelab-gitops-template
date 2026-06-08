@@ -1,0 +1,16 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: backup-observability
+  namespace: backup-observability
+  labels:
+    app.kubernetes.io/name: backup-observability
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backup-observability
+  endpoints:
+    - port: http
+      interval: 5m
+      scrapeTimeout: 30s

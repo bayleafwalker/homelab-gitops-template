@@ -1,0 +1,13 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: gateway-internal
+spec:
+  serviceSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: internal
+      io.cilium.gateway/owning-gateway: internal
+  blocks:
+    - start: ${GATEWAY_INTERNAL_IP}
+      stop: ${GATEWAY_INTERNAL_IP}
+

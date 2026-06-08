@@ -1,0 +1,116 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: obsidian-livesync-init
+  namespace: couchdb
+  labels:
+    app.kubernetes.io/name: obsidian-livesync-init
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: obsidian-livesync-init
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 568
+        runAsGroup: 568
+        fsGroup: 568
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: init
+          image: curlimages/curl:8.13.0@sha256:e6ebb770fb6e2236c2e83ad6b6dbbd32cb6dff0b17a9482a7d4bca20f1c9b50a
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: COUCHDB_URL
+              value: http://couchdb-svc-couchdb.couchdb.svc.cluster.local:5984
+            - name: COUCHDB_ADMIN_USER
+              value: admin
+            - name: COUCHDB_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: couchdb-credentials
+                  key: admin-password
+            - name: LIVESYNC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: obsidian-livesync-credentials
+                  key: username
+            - name: LIVESYNC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: obsidian-livesync-credentials
+                  key: password
+            - name: LIVESYNC_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: obsidian-livesync-credentials
+                  key: database
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              until curl -fsS -u "$${COUCHDB_ADMIN_USER}:$${COUCHDB_ADMIN_PASSWORD}" "$${COUCHDB_URL}/_up"; do
+                sleep 5
+              done
+
+              curl -fsS -X PUT \
+                -u "$${COUCHDB_ADMIN_USER}:$${COUCHDB_ADMIN_PASSWORD}" \
+                "$${COUCHDB_URL}/_users" || true
+
+              USER_ID="org.couchdb.user:$${LIVESYNC_USERNAME}"
+              EXISTING_USER="$(curl -fsS \
+                -u "$${COUCHDB_ADMIN_USER}:$${COUCHDB_ADMIN_PASSWORD}" \
+                "$${COUCHDB_URL}/_users/$${USER_ID}" || true)"
+              USER_REV="$(printf "%s" "$${EXISTING_USER}" | sed -n 's/.*"_rev":"\([^"]*\)".*/\1/p')"
+
+              if [ -n "$${USER_REV}" ]; then
+                REV_FIELD="\"_rev\": \"$${USER_REV}\","
+              else
+                REV_FIELD=""
+              fi
+
+              cat > /tmp/livesync-user.json <<EOF
+              {
+                "_id": "$${USER_ID}",
+                $${REV_FIELD}
+                "name": "$${LIVESYNC_USERNAME}",
+                "password": "$${LIVESYNC_PASSWORD}",
+                "roles": [],
+                "type": "user"
+              }
+              EOF
+              curl -fsS -X PUT \
+                -u "$${COUCHDB_ADMIN_USER}:$${COUCHDB_ADMIN_PASSWORD}" \
+                -H "Content-Type: application/json" \
+                --data-binary @/tmp/livesync-user.json \
+                "$${COUCHDB_URL}/_users/$${USER_ID}"
+
+              curl -fsS -X PUT \
+                -u "$${COUCHDB_ADMIN_USER}:$${COUCHDB_ADMIN_PASSWORD}" \
+                "$${COUCHDB_URL}/$${LIVESYNC_DATABASE}" || true
+
+              cat > /tmp/livesync-security.json <<EOF
+              {
+                "admins": {
+                  "names": ["$${COUCHDB_ADMIN_USER}", "$${LIVESYNC_USERNAME}"],
+                  "roles": []
+                },
+                "members": {
+                  "names": ["$${LIVESYNC_USERNAME}"],
+                  "roles": []
+                }
+              }
+              EOF
+              curl -fsS -X PUT \
+                -u "$${COUCHDB_ADMIN_USER}:$${COUCHDB_ADMIN_PASSWORD}" \
+                -H "Content-Type: application/json" \
+                --data-binary @/tmp/livesync-security.json \
+                "$${COUCHDB_URL}/$${LIVESYNC_DATABASE}/_security"

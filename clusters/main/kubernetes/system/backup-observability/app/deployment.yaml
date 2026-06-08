@@ -1,0 +1,54 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backup-observability
+  namespace: backup-observability
+  labels:
+    app.kubernetes.io/name: backup-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backup-observability
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backup-observability
+      annotations:
+        homelab.example.com/exporter-revision: "2026-05-20-volsync-schedule-label"
+    spec:
+      serviceAccountName: backup-observability
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: exporter
+          image: python:3.13.3-alpine
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/app/exporter.py"]
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: exporter
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: exporter
+          configMap:
+            name: backup-observability-exporter

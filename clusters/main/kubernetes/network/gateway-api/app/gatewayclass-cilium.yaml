@@ -1,0 +1,12 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: cilium
+spec:
+  controllerName: io.cilium/gateway-controller
+  description: Cilium GatewayClass for shared internal gateway routing
+  parametersRef:
+    group: cilium.io
+    kind: CiliumGatewayClassConfig
+    namespace: gateway
+    name: cilium

@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+data:
+  Corefile: |
+    # Forward your homelab domain to your internal DNS resolver (e.g. AdGuard
+    # Home / Pi-hole / OPNsense) so in-cluster lookups of LAN hostnames like
+    # `home.example.com` resolve to your internal LoadBalancer IPs rather than
+    # going out to the public internet. Replace both the zone name and the
+    # forward target with your own domain (DOMAIN_0) and resolver IP.
+    example.com:53 {
+        errors
+        cache 30
+        forward . 192.168.1.1 {
+           max_concurrent 1000
+        }
+    }
+
+    .:53 {
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        log . {
+            class error
+        }
+        prometheus :9153
+
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+        forward . /etc/resolv.conf {
+           max_concurrent 1000
+        }
+        cache 30 {
+           disable success cluster.local
+           disable denial cluster.local
+        }
+        loop
+        reload
+        loadbalance
+    }

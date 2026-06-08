@@ -1,0 +1,86 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: backup-observability
+  namespace: backup-observability
+  labels:
+    app.kubernetes.io/name: backup-observability
+spec:
+  groups:
+    - name: homelab.backup-observability
+      rules:
+        - alert: BackupObservabilityExporterDown
+          expr: up{job="backup-observability"} == 0 or absent(up{job="backup-observability"})
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: Backup observability exporter is not being scraped
+            description: Prometheus cannot scrape the backup observability exporter.
+        - alert: VolSyncReplicationSourceMissingSuccessfulSync
+          expr: homelab_volsync_replicationsource_last_sync_timestamp == 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: VolSync source has no successful sync timestamp
+            description: "{{ $labels.namespace }}/{{ $labels.name }} has no recorded lastSyncTime."
+        - alert: VolSyncReplicationSourceStale
+          expr: |-
+            (
+              (
+                time() - homelab_volsync_replicationsource_last_sync_timestamp{schedule!~"^\\S+\\s+\\S+\\s+\\*\\s+\\*\\s+\\S+$"} > 36 * 60 * 60
+              )
+              or
+              (
+                time() - homelab_volsync_replicationsource_last_sync_timestamp{schedule=~"^\\S+\\s+\\S+\\s+\\*\\s+\\*\\s+\\S+$"} > 8 * 24 * 60 * 60
+              )
+            )
+            and homelab_volsync_replicationsource_last_sync_timestamp > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: VolSync backup is stale
+            description: "{{ $labels.namespace }}/{{ $labels.name }} has not synced successfully within the expected freshness window for schedule '{{ $labels.schedule }}'."
+        - alert: CNPGBackupMissingSuccessfulRun
+          expr: homelab_cnpg_cluster_backup_configured == 1 unless on(namespace, cluster) homelab_cnpg_latest_completed_backup_timestamp > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: CNPG cluster has no completed backup
+            description: "{{ $labels.namespace }}/{{ $labels.cluster }} has backup configured but no completed Backup object."
+        - alert: CNPGBackupStale
+          expr: (time() - homelab_cnpg_latest_completed_backup_timestamp > 36 * 60 * 60) and homelab_cnpg_latest_completed_backup_timestamp > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: CNPG backup is stale
+            description: "{{ $labels.namespace }}/{{ $labels.cluster }} has no completed backup newer than 36 hours."
+        - alert: LonghornBackupStale
+          expr: time() - homelab_longhorn_latest_backup_timestamp > 36 * 60 * 60
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: Longhorn backups are stale
+            description: Longhorn has no backup object newer than 36 hours.
+        - alert: RestoreDrillNeverSucceeded
+          expr: homelab_restore_drill_last_success_timestamp == 0
+          for: 2h
+          labels:
+            severity: warning
+          annotations:
+            summary: Restore drill has not succeeded yet
+            description: "{{ $labels.namespace }}/{{ $labels.cronjob }} has no successful run recorded."
+        - alert: RestoreDrillStale
+          expr: (time() - homelab_restore_drill_last_success_timestamp > 45 * 24 * 60 * 60) and homelab_restore_drill_last_success_timestamp > 0
+          for: 2h
+          labels:
+            severity: warning
+          annotations:
+            summary: Restore drill is stale
+            description: "{{ $labels.namespace }}/{{ $labels.cronjob }} has not succeeded in more than 45 days."

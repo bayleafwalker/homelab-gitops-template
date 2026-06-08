@@ -1,0 +1,20 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-gatus-internal
+  namespace: apps
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: homepage
+      app.kubernetes.io/name: homepage
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: gatus
+            k8s:app.kubernetes.io/instance: gatus
+            k8s:app.kubernetes.io/name: gatus
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP

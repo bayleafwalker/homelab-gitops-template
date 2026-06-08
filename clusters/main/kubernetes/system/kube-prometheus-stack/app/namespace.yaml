@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-prometheus-stack
+  annotations:
+    volsync.backube/privileged-movers: "true"
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    goldilocks.fairwinds.com/enabled: "true"

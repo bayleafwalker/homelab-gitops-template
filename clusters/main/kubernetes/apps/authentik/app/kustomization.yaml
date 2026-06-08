@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - admin-creds.yaml
+  - hetzner-s3-credentials.yaml
+  - ldap-outpost-token.yaml
+  - ldap-cert-sync.yaml
+  - gateway-api-referencegrant.yaml
+  - gateway-api-routes.yaml
+  - helm-release.yaml
+  - volsync-hetzner.yaml
+  - cnpg-restore-drill.yaml

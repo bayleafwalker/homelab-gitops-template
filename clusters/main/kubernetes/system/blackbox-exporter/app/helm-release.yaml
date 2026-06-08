@@ -1,0 +1,119 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: blackbox-exporter
+  namespace: kube-prometheus-stack
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: prometheus-blackbox-exporter
+      version: 11.11.0
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+      interval: 5m
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    nodeSelector:
+      kubernetes.io/arch: amd64
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+
+    config:
+      modules:
+        http_2xx:
+          prober: http
+          timeout: 10s
+          http:
+            valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+            follow_redirects: true
+            preferred_ip_protocol: "ip4"
+        https_ingress:
+          prober: http
+          timeout: 10s
+          http:
+            valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+            follow_redirects: false
+            preferred_ip_protocol: "ip4"
+            valid_status_codes: [200, 201, 202, 204, 301, 302, 303, 307, 308, 401, 403, 404]
+        http_2xx_insecure:
+          prober: http
+          timeout: 10s
+          http:
+            valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+            follow_redirects: true
+            preferred_ip_protocol: "ip4"
+            tls_config:
+              insecure_skip_verify: true
+        tcp_connect:
+          prober: tcp
+          timeout: 10s
+          tcp:
+            preferred_ip_protocol: "ip4"
+
+    serviceMonitor:
+      enabled: true
+      defaults:
+        additionalMetricsRelabels:
+          monitoring: blackbox
+        interval: 30s
+        scrapeTimeout: 10s
+        # Most ingress-authenticated / redirected endpoints won't return strict 2xx.
+        # Use a more permissive module by default to reduce alert noise while still
+        # validating TLS + basic reachability.
+        module: https_ingress
+      targets:
+        - name: homepage
+          url: https://home.${DOMAIN_0}
+        - name: authentik
+          url: https://auth.${DOMAIN_0}
+        - name: vaultwarden
+          url: https://vault.${DOMAIN_0}
+        - name: code-server
+          url: https://code.${DOMAIN_0}
+        # Intentionally parked services (replicas=0) are excluded from blackbox
+        # target list to avoid persistent false-positive 503 probe alerts.
+        - name: nextcloud
+          url: https://cloud.${DOMAIN_0}
+        - name: kubernetes-dashboard
+          url: https://kube.${DOMAIN_0}
+
+        - name: custom-app
+          url: https://app.${DOMAIN_0}
+
+        - name: registry
+          url: https://registry.${DOMAIN_0}/v2/
+        - name: couchdb
+          url: https://couchdb.${DOMAIN_0}/_utils/
+        - name: omada-controller
+          url: https://omada.${DOMAIN_0}
+
+        - name: grafana
+          url: https://grafana.${DOMAIN_0}
+        - name: alertmanager
+          url: https://alertmanager.${DOMAIN_0}
+        - name: prometheus
+          url: https://prometheus.${DOMAIN_0}
+
+        # External (non-cluster) endpoints; some may use self-signed certificates.
+        - name: opnsense
+          url: https://opnsense.${DOMAIN_HOST}:4443
+          module: http_2xx_insecure
+        - name: adguard
+          url: ${GATEWAY_INTERNAL_IP}:443
+          module: tcp_connect
+        - name: truenas
+          url: https://truenas.${DOMAIN_HOST}
+          module: http_2xx_insecure

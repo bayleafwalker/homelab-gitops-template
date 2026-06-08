@@ -1,0 +1,260 @@
+---
+# Exclude patterns for the workspace restic backup.
+# VolSync's restic mover does not support exclude patterns (field removed in 0.9),
+# so this CronJob replaces the VolSync ReplicationSource for truenas-workspace-pvc.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workspace-restic-excludes
+  namespace: vscode
+data:
+  excludes: |
+    node_modules
+    node_modules.*
+    .venv
+    __pycache__
+    .pytest_cache
+    .cache
+    .local/state/pod-venvs
+    .local/share/uv/tools
+    vscode-home/.local/state/pod-venvs
+    vscode-home/.local/share/uv/tools
+    dist
+    build
+    .eggs
+    *.egg-info
+    .tools
+    homelab/tmp
+---
+# Longhorn PVC for the restic client-side cache (avoids writing cache to NFS).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workspace-backup-cache
+  namespace: vscode
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+# Runs restic backup daily at 03:55 UTC with proper excludes.
+# Uses the same S3 credentials/path as the former VolSync ReplicationSource.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: workspace-backup
+  namespace: vscode
+  labels:
+    app.kubernetes.io/name: workspace-backup
+    app.kubernetes.io/part-of: vscode
+spec:
+  schedule: "55 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: workspace-backup
+        app.kubernetes.io/part-of: vscode
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: workspace-backup
+            app.kubernetes.io/part-of: vscode
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 568
+            runAsGroup: 568
+            fsGroup: 568
+          containers:
+            - name: restic
+              image: quay.io/backube/volsync:0.13.1
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  export HOME=/tmp
+                  export RESTIC_CACHE_DIR=/cache
+                  export RESTIC_PROGRESS_FPS=0.1
+
+                  # Init repo if not already initialised
+                  if ! restic cat config &>/dev/null; then
+                    echo "=== Initialising restic repo ==="
+                    restic init
+                  fi
+
+                  echo "=== Starting backup ==="
+                  restic backup \
+                    --host volsync \
+                    --exclude-file=/excludes/excludes \
+                    --exclude=lost+found \
+                    /data
+
+                  echo "=== Forgetting old snapshots ==="
+                  restic forget \
+                    --host volsync \
+                    --keep-daily 7 \
+                    --keep-weekly 4 \
+                    --keep-monthly 3
+
+                  echo "=== Done ==="
+              envFrom:
+                - secretRef:
+                    name: volsync-restic-workspace-projects
+              volumeMounts:
+                - name: workspace
+                  mountPath: /data
+                  readOnly: true
+                - name: cache
+                  mountPath: /cache
+                - name: excludes
+                  mountPath: /excludes
+          volumes:
+            - name: workspace
+              persistentVolumeClaim:
+                claimName: truenas-workspace-pvc
+                readOnly: true
+            - name: cache
+              persistentVolumeClaim:
+                claimName: workspace-backup-cache
+            - name: excludes
+              configMap:
+                name: workspace-restic-excludes
+---
+# Longhorn PVCs for the monthly workspace restore drill.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workspace-restore-drill-cache
+  namespace: vscode
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workspace-restore-drill-target
+  namespace: vscode
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: longhorn
+---
+# Monthly restore drill: verifies the restic repo is readable and restorable.
+# This is a CronJob rather than a VolSync ReplicationDestination because the
+# workspace backup is owned by a custom restic CronJob and contains files whose
+# ownership metadata must be replayed onto a disposable Longhorn PVC.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: workspace-restore-drill
+  namespace: vscode
+  labels:
+    app.kubernetes.io/name: workspace-restore-drill
+    app.kubernetes.io/part-of: vscode
+spec:
+  schedule: "10 5 1 * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: workspace-restore-drill
+        app.kubernetes.io/part-of: vscode
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: workspace-restore-drill
+            app.kubernetes.io/part-of: vscode
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            fsGroup: 0
+          containers:
+            - name: restic
+              image: quay.io/backube/volsync:0.13.1
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  add:
+                    - CHOWN
+                    - DAC_OVERRIDE
+                    - FOWNER
+                  drop:
+                    - ALL
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  export HOME=/tmp
+                  export RESTIC_CACHE_DIR=/cache
+                  export RESTIC_PROGRESS_FPS=0.1
+
+                  echo "=== Preparing restore target ==="
+                  chmod -R u+rwX /restore || true
+                  chown -R 0:0 /restore || true
+                  find /restore -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+                  echo "=== Checking repository ==="
+                  restic check --read-data-subset=1/100 --retry-lock 30m
+
+                  echo "=== Starting restore drill ==="
+                  restic restore latest \
+                    --host volsync \
+                    --exclude-file=/excludes/excludes \
+                    --exclude-xattr=security.selinux \
+                    --exclude=lost+found \
+                    --target /restore \
+                    --retry-lock 30m
+
+                  echo "=== Verifying restored tree ==="
+                  test -d /restore/data
+                  chmod -R u+rwX /restore || true
+                  chown -R 0:0 /restore || true
+                  find /restore -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+                  echo "=== Done ==="
+              envFrom:
+                - secretRef:
+                    name: volsync-restic-workspace-projects
+              volumeMounts:
+                - name: restore-target
+                  mountPath: /restore
+                - name: cache
+                  mountPath: /cache
+                - name: excludes
+                  mountPath: /excludes
+          volumes:
+            - name: restore-target
+              persistentVolumeClaim:
+                claimName: workspace-restore-drill-target
+            - name: cache
+              persistentVolumeClaim:
+                claimName: workspace-restore-drill-cache
+            - name: excludes
+              configMap:
+                name: workspace-restic-excludes

@@ -1,0 +1,124 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+    name: cilium
+    namespace: kube-system
+    annotations:
+        meta.helm.sh/release-name: cilium
+        meta.helm.sh/release-namespace: kube-system
+    labels:
+        app.kubernetes.io/managed-by: Helm
+spec:
+    interval: 15m
+    chart:
+        spec:
+            chart: cilium
+            version: 1.18.6
+            sourceRef:
+                kind: HelmRepository
+                name: home-ops-mirror
+                namespace: flux-system
+            interval: 15m
+    timeout: 20m
+    maxHistory: 3
+    driftDetection:
+      mode: warn
+    install:
+        remediation:
+            retries: 3
+    upgrade:
+        cleanupOnFail: true
+        remediation:
+            retries: 3
+            remediateLastFailure: true
+    uninstall:
+        keepHistory: false
+    values:
+      # autoDirectNodeRoutes: true
+      # routingMode: native
+      hubble:
+        enabled: false
+      # Talos OOM controller has SIGKILL'd the cilium-agent cgroup on k8s-worker-3.
+      # Give Cilium a meaningful memory request to reduce its OOM kill priority and
+      # a high (but finite) limit as a backstop.
+      resources:
+        requests:
+          cpu: 500m
+          memory: 1Gi
+        limits:
+          cpu: 4000m
+          memory: 12Gi
+      cluster:
+        name: ${CLUSTERNAME}
+        id: 1
+      ipv4NativeRoutingCIDR: ${PODNET}
+      securityContext:
+        privileged: true
+        capabilities:
+          ciliumAgent:
+            - CHOWN
+            - KILL
+            - NET_ADMIN
+            - NET_RAW
+            - IPC_LOCK
+            - SYS_ADMIN
+            - SYS_RESOURCE
+            - DAC_OVERRIDE
+            - FOWNER
+            - SETGID
+            - SETUID
+          cleanCiliumState:
+            - NET_ADMIN
+            - SYS_ADMIN
+            - SYS_RESOURCE
+      cgroup:
+        automount:
+          enabled: false
+        hostRoot: /sys/fs/cgroup
+      enableRuntimeDeviceDetection: true
+      endpointRoutes:
+        enabled: true
+      ipam:
+        mode: kubernetes
+      defaultLBServiceIPAM: none
+      # Prefer the Talos control-plane VIP for Kubernetes API access.
+      # This avoids coupling Cilium's control-plane connectivity to per-node kubeprism.
+      k8sServiceHost: ${VIP}
+      k8sServicePort: 6443
+      kubeProxyReplacement: true
+      kubeProxyReplacementHealthzBindAddr: 0.0.0.0:10256
+      localRedirectPolicy: true
+      l2announcements:
+        enabled: true
+      gatewayAPI:
+        enabled: true
+        gatewayClass:
+          create: "false"
+        externalTrafficPolicy: Local
+      envoy:
+        resources:
+          requests:
+            cpu: 25m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+      operator:
+        rollOutPods: true
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+        tolerations:
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+            effect: NoSchedule
+          - key: node-role.kubernetes.io/master
+            operator: Exists
+            effect: NoSchedule
+        resources:
+          requests:
+            cpu: 25m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+      rollOutCiliumPods: true

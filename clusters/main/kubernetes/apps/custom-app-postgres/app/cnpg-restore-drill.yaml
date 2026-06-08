@@ -1,0 +1,125 @@
+# Monthly restore drill: spins up a throwaway CNPG cluster from the latest
+# completed backup, waits for it to become Ready, then tears it down. This
+# proves backups are restorable (not just "uploaded") without manual effort.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: custom-app-postgres-restore-drill-runner
+  namespace: custom-app
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: custom-app-postgres-restore-drill-runner
+  namespace: custom-app
+rules:
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters", "backups"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: custom-app-postgres-restore-drill-runner
+  namespace: custom-app
+subjects:
+  - kind: ServiceAccount
+    name: custom-app-postgres-restore-drill-runner
+    namespace: custom-app
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: custom-app-postgres-restore-drill-runner
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: custom-app-postgres-restore-drill
+  namespace: custom-app
+spec:
+  schedule: "17 6 1 * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          serviceAccountName: custom-app-postgres-restore-drill-runner
+          restartPolicy: Never
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: drill
+              image: public.ecr.aws/bitnami/kubectl:1.33.0
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -eu
+
+                  ns="$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
+                  cluster="custom-app-postgres"
+                  restore="custom-app-postgres-restore-drill"
+                  app_secret="custom-app-postgres-app"
+                  kubectl="/opt/bitnami/kubectl/bin/kubectl"
+
+                  image="$("$kubectl" -n "$ns" get clusters.postgresql.cnpg.io "$cluster" -o jsonpath='{.spec.imageName}')"
+                  backups="$(
+                    "$kubectl" -n "$ns" get backups.postgresql.cnpg.io \
+                      -l "cnpg.io/cluster=$cluster" \
+                      -o jsonpath='{range .items[*]}{.metadata.creationTimestamp}{"\t"}{.metadata.name}{"\t"}{.status.phase}{"\n"}{end}'
+                  )"
+                  backup="$(printf '%s\n' "$backups" | awk '$3=="completed"{print $1"\t"$2}' | sort | tail -n 1 | cut -f2)"
+
+                  if [ -z "$backup" ]; then
+                    echo "No completed backups found for $cluster"
+                    exit 1
+                  fi
+
+                  "$kubectl" -n "$ns" delete clusters.postgresql.cnpg.io "$restore" --ignore-not-found --wait=true
+
+                  cat <<EOF | "$kubectl" -n "$ns" apply -f -
+                  apiVersion: postgresql.cnpg.io/v1
+                  kind: Cluster
+                  metadata:
+                    name: $restore
+                  spec:
+                    instances: 1
+                    imageName: $image
+                    bootstrap:
+                      recovery:
+                        backup:
+                          name: $backup
+                        secret:
+                          name: $app_secret
+                    storage:
+                      size: 1Gi
+                      storageClass: longhorn
+                    resources:
+                      requests:
+                        cpu: 25m
+                        memory: 128Mi
+                      limits:
+                        cpu: 500m
+                        memory: 512Mi
+                  EOF
+
+                  "$kubectl" -n "$ns" wait --for=condition=Ready --timeout=30m clusters.postgresql.cnpg.io/"$restore"
+                  "$kubectl" -n "$ns" delete clusters.postgresql.cnpg.io "$restore" --wait=true
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                runAsUser: 65534
+                runAsGroup: 65534
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  cpu: 200m
+                  memory: 256Mi

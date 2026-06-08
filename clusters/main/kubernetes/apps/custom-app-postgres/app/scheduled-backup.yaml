@@ -1,0 +1,14 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: custom-app-postgres-daily
+  namespace: custom-app
+spec:
+  cluster:
+    name: custom-app-postgres
+  method: barmanObjectStore
+  schedule: "0 25 2 * * *"
+  backupOwnerReference: cluster
+  immediate: true
+  suspend: false
+  target: primary

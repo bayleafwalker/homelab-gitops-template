@@ -1,0 +1,19 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-webhook
+  namespace: snapshot-controller
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: snapshot-controller
+      app.kubernetes.io/name: snapshot-controller
+      pod.name: main
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "8443"
+              protocol: TCP

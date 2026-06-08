@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - admin-creds.yaml
+  - gateway-api-routes.yaml
+  - helm-release.yaml
+  - mcp-settings.yaml
+  - authentik-outpost-ingress.yaml
+  - volsync-hetzner.yaml
+  - workspace-backup.yaml

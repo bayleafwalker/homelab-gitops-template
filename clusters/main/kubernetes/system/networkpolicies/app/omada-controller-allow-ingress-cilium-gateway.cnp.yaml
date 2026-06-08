@@ -1,0 +1,19 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-cilium-gateway
+  namespace: omada-controller
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: omada-gateway-proxy
+  ingress:
+    - fromEntities:
+        # Cilium marks traffic from the Gateway/ingress proxy with the reserved "ingress" identity.
+        - ingress
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

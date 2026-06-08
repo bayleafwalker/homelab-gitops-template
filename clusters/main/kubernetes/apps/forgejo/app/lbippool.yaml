@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: forgejo-ssh
+spec:
+  serviceSelector:
+    matchLabels:
+      io.kubernetes.service.namespace: forgejo
+      io.kubernetes.service.name: forgejo-gitea-ssh
+  blocks:
+    - start: ${FORGEJO_SSH_IP}
+      stop: ${FORGEJO_SSH_IP}

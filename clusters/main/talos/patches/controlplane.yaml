@@ -1,0 +1,43 @@
+machine:
+  features:
+    kubernetesTalosAPIAccess:
+      enabled: true
+      allowedRoles:
+        - os:admin
+      allowedKubernetesNamespaces:
+        - system-upgrade
+  kubelet:
+    nodeIP:
+      validSubnets:
+        - 192.168.1.0/24
+cluster:
+  controllerManager:
+    extraArgs:
+      bind-address: 0.0.0.0
+  proxy:
+    extraArgs:
+      metrics-bind-address: 0.0.0.0:10249
+  apiServer:
+    extraArgs:
+      enable-aggregator-routing: "true"
+    admissionControl:
+      - name: PodSecurity
+        configuration:
+          exemptions:
+            namespaces:
+              - metallb
+              - metallb-config
+              - topolvm-system
+              - longhorn-system
+              - kyverno
+              - system-upgrade
+              - openebs
+              - snapshot-controller
+              - volsync
+              - flux-system
+  scheduler:
+    extraArgs:
+      bind-address: 0.0.0.0
+    # cluster.scheduler.config removed: integer fields (maxSkew: 1) trigger a
+    # DeepCopyJSONValue panic in Talos 1.13.3 (siderolabs/talos#13445).
+    # Restore after upgrading to 1.13.4+ which contains the fix.

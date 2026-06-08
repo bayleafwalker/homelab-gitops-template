@@ -1,0 +1,34 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: forgejo
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./clusters/main/kubernetes/apps/forgejo/app
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  dependsOn:
+    - name: cloudnative-pg
+    - name: gateway-api
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-config
+      - kind: Secret
+        name: cluster-secrets
+      - kind: ConfigMap
+        name: upgrade-settings
+  healthChecks:
+    - apiVersion: postgresql.cnpg.io/v1
+      kind: Cluster
+      name: forgejo-db
+      namespace: forgejo
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: forgejo
+      namespace: forgejo
+  timeout: 15m

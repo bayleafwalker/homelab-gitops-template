@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-admin-creds
+  namespace: authentik
+type: Opaque
+stringData:
+  password: ${AK_ADMIN_PASSWORD}

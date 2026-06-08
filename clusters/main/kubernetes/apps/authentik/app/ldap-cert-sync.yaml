@@ -1,0 +1,146 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authentik-cert-sync-token
+  namespace: authentik
+type: Opaque
+stringData:
+  token: ${AUTHENTIK_CERT_SYNC_TOKEN}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: authentik-cert-sync
+  namespace: authentik
+data:
+  sync.py: |
+    import json
+    import os
+    import sys
+    import urllib.parse
+    import urllib.request
+
+    AUTHENTIK_URL = os.environ.get("AUTHENTIK_URL", "").rstrip("/")
+    AUTHENTIK_TOKEN = os.environ.get("AUTHENTIK_TOKEN", "")
+    CERT_KEYPAIR_NAME = os.environ.get("CERT_KEYPAIR_NAME", "cluster-wildcard-certificate-example-com")
+    CERT_PATH = os.environ.get("CERT_PATH", "/tls/tls.crt")
+    KEY_PATH = os.environ.get("KEY_PATH", "/tls/tls.key")
+
+    def _request(method: str, path: str, payload: dict | None = None) -> dict:
+        url = f"{AUTHENTIK_URL}{path}"
+        body = None
+        if payload is not None:
+            body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=body, method=method)
+        req.add_header("Authorization", f"Bearer {AUTHENTIK_TOKEN}")
+        req.add_header("Accept", "application/json")
+        if body is not None:
+            req.add_header("Content-Type", "application/json")
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = resp.read()
+            return json.loads(data.decode("utf-8")) if data else {}
+
+    def _fatal(message: str) -> None:
+        print(f"fatal: {message}", file=sys.stderr)
+        sys.exit(1)
+
+    if not AUTHENTIK_URL:
+        _fatal("AUTHENTIK_URL is required")
+    if not AUTHENTIK_TOKEN:
+        print("AUTHENTIK_TOKEN not set; skipping", file=sys.stderr)
+        sys.exit(0)
+    if not os.path.exists(CERT_PATH):
+        _fatal(f"certificate not found at {CERT_PATH}")
+    if not os.path.exists(KEY_PATH):
+        _fatal(f"private key not found at {KEY_PATH}")
+
+    with open(CERT_PATH, "r", encoding="utf-8") as f:
+        certificate_data = f.read()
+    with open(KEY_PATH, "r", encoding="utf-8") as f:
+        key_data = f.read()
+
+    query = urllib.parse.urlencode({"name": CERT_KEYPAIR_NAME, "page_size": "100"})
+    current = _request("GET", f"/api/v3/crypto/certificatekeypairs/?{query}")
+    results = current.get("results", [])
+
+    match = next((kp for kp in results if kp.get("name") == CERT_KEYPAIR_NAME), None)
+    if match is None:
+        created = _request(
+            "POST",
+            "/api/v3/crypto/certificatekeypairs/",
+            {
+                "name": CERT_KEYPAIR_NAME,
+                "certificate_data": certificate_data,
+                "key_data": key_data,
+            },
+        )
+        print(f"created certificate-key-pair {created.get('pk')}")
+        sys.exit(0)
+
+    kp_uuid = match.get("pk")
+    if not kp_uuid:
+        _fatal("matched certificate-key-pair is missing pk")
+
+    _request(
+        "PUT",
+        f"/api/v3/crypto/certificatekeypairs/{kp_uuid}/",
+        {
+            "name": CERT_KEYPAIR_NAME,
+            "certificate_data": certificate_data,
+            "key_data": key_data,
+        },
+    )
+    print(f"updated certificate-key-pair {kp_uuid}")
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: authentik-cert-sync
+  namespace: authentik
+spec:
+  schedule: "0 */6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 0
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          volumes:
+            - name: tls
+              secret:
+                secretName: certificate-issuer-domain-0-wildcard
+            - name: sync
+              configMap:
+                name: authentik-cert-sync
+                defaultMode: 0555
+          containers:
+            - name: sync
+              image: python:3.13.1-alpine3.21
+              command: ["python", "/sync/sync.py"]
+              env:
+                - name: AUTHENTIK_URL
+                  value: http://authentik-http.authentik.svc.cluster.local:10230
+                - name: AUTHENTIK_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: authentik-cert-sync-token
+                      key: token
+                - name: CERT_KEYPAIR_NAME
+                  value: cluster-wildcard-certificate-example-com
+                - name: CERT_PATH
+                  value: /tls/tls.crt
+                - name: KEY_PATH
+                  value: /tls/tls.key
+              volumeMounts:
+                - name: tls
+                  mountPath: /tls
+                  readOnly: true
+                - name: sync
+                  mountPath: /sync
+                  readOnly: true

@@ -1,0 +1,20 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-cilium-gateway
+  namespace: headlamp
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: headlamp
+      app.kubernetes.io/name: headlamp
+  ingress:
+    - fromEntities:
+        # Cilium marks traffic from the Gateway/ingress proxy with the reserved "ingress" identity.
+        - ingress
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "4466"
+              protocol: TCP

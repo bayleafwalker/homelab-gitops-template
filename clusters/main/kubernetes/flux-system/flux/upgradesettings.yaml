@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: upgrade-settings
+    namespace: flux-system
+data:
+  # renovate-disabled: datasource=docker depName=ghcr.io/siderolabs/installer
+  TALOS_VERSION: v1.13.3
+  # Talos Image Factory installer images (must match your schematics/extensions).
+  TALOS_INSTALLER_IMAGE_DEFAULT: factory.talos.dev/metal-installer/ffdc59f4fd5b62784876a03c3e31a81fbfecc871eaa7f27aca33b9f5ff1ec96e:v1.13.3
+  TALOS_INSTALLER_IMAGE_NVIDIA: factory.talos.dev/metal-installer/71691680f7ee10f583d260c4689e1beb4092208b415e240348c6a9011bdabf92:v1.13.3
+  # renovate-disabled: datasource=docker depName=ghcr.io/siderolabs/kubelet
+  KUBERNETES_VERSION: v1.36.1

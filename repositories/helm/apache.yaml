@@ -1,0 +1,11 @@
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/source.toolkit.fluxcd.io/helmrepository_v1.json
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: apache
+  namespace: flux-system
+spec:
+  type: default
+  interval: 5m
+  url: https://apache.github.io/couchdb-helm

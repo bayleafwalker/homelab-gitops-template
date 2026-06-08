@@ -1,0 +1,50 @@
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: allow-egress-kube-apiserver-nodes
+spec:
+  endpointSelector:
+    matchExpressions:
+      - key: "k8s:io.cilium.k8s.namespace.labels.kubernetes.io/metadata.name"
+        operator: In
+        values:
+          - arc-system
+          - apps
+          - authentik
+          - blocky
+          - cert-manager
+          - cloudnative-pg
+          - custom-app
+          - goldilocks
+          - headlamp
+          - longhorn-system
+          - loki
+          - metallb
+          - nextcloud
+          - openebs
+          - paperless
+          - spegel
+          - snapshot-controller
+          - system-upgrade
+          - vaultwarden
+          - volsync
+          - vpa
+          - vscode
+  egress:
+    - toEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "6443"
+              protocol: TCP
+    - toCIDRSet:
+        - cidr: 172.17.0.1/32
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "6443"
+              protocol: TCP

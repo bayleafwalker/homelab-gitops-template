@@ -1,0 +1,17 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-ingress-nodeport-registry
+  namespace: registry
+spec:
+  endpointSelector:
+    matchLabels:
+      app: docker-registry
+  ingress:
+    - fromCIDRSet:
+        - cidr: ${LAN_CIDR}
+        - cidr: 100.64.0.0/10
+      toPorts:
+        - ports:
+            - port: "5000"
+              protocol: TCP

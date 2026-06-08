@@ -1,0 +1,102 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: talos-etcd-snapshot
+  namespace: etcd-backup
+spec:
+  schedule: "11 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: DoesNotExist
+          volumes:
+            - name: work
+              emptyDir: {}
+            - name: talos
+              secret:
+                secretName: talos
+                items:
+                  - key: config
+                    path: config
+          initContainers:
+            - name: snapshot
+              image: ghcr.io/siderolabs/talosctl:v1.11.5
+              args:
+                - --talosconfig=/var/run/secrets/talos/config
+                - --endpoints=${VIP}
+                - --nodes=${VIP}
+                - etcd
+                - snapshot
+                - /work/etcd.snapshot
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: talos
+                  mountPath: /var/run/secrets/talos
+                  readOnly: true
+          containers:
+            - name: upload
+              image: rclone/rclone:1.66
+              envFrom:
+                - secretRef:
+                    name: hetzner-s3-sse-c
+                    optional: true
+              env:
+                - name: RCLONE_CONFIG_HETZNER_TYPE
+                  value: s3
+                - name: RCLONE_CONFIG_HETZNER_PROVIDER
+                  value: Other
+                - name: RCLONE_CONFIG_HETZNER_ENV_AUTH
+                  value: "false"
+                - name: RCLONE_CONFIG_HETZNER_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: hetzner-s3
+                      key: AWS_ACCESS_KEY_ID
+                - name: RCLONE_CONFIG_HETZNER_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: hetzner-s3
+                      key: AWS_SECRET_ACCESS_KEY
+                - name: RCLONE_CONFIG_HETZNER_ENDPOINT
+                  valueFrom:
+                    secretKeyRef:
+                      name: hetzner-s3
+                      key: AWS_ENDPOINT
+                - name: RCLONE_CONFIG_HETZNER_REGION
+                  value: hel1
+                - name: RCLONE_CONFIG_HETZNER_NO_CHECK_BUCKET
+                  value: "true"
+                - name: RCLONE_CONFIG_HETZNER_ACL
+                  value: private
+                - name: HETZNER_S3_BUCKET_NAME
+                  value: ${HETZNER_S3_BUCKET_NAME}
+                - name: CLUSTERNAME
+                  value: ${CLUSTERNAME}
+                - name: ETCD_SNAPSHOT_RETENTION_DAYS
+                  value: "30"
+              command:
+                - /bin/sh
+                - -c
+              args:
+                - |
+                  set -euo pipefail
+                  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+                  dst="HETZNER:$HETZNER_S3_BUCKET_NAME/talos/etcd/$CLUSTERNAME/etcd-$ts.snapshot"
+                  rclone copy /work/etcd.snapshot "$dst" --s3-no-check-bucket
+                  rclone delete "HETZNER:$HETZNER_S3_BUCKET_NAME/talos/etcd/$CLUSTERNAME" --min-age "$ETCD_SNAPSHOT_RETENTION_DAYS"d --rmdirs --s3-no-check-bucket
+              volumeMounts:
+                - name: work
+                  mountPath: /work
