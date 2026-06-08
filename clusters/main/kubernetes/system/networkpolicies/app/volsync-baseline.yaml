@@ -55,7 +55,7 @@ spec:
   ingress:
     - from:
         - ipBlock:
-            cidr: ${MASTER4IP_IP}/32
+            cidr: ${CONTROL3_IP}/32
         - ipBlock:
             cidr: ${VIP}/32
       ports:

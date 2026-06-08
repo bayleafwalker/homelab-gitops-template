@@ -32,12 +32,12 @@ Apply on Talos (typical workflow)
 #    See docs/operations.md for the canonical steps.
 
 # 2) Apply to each node (examples — adjust node IPs and generated filenames)
-talosctl --talosconfig clusters/.talos/config apply-config --insecure --nodes ${MASTER2IP} --file clusters/main/talos/generated/main-k8s-control-2.yaml
-talosctl --talosconfig clusters/.talos/config apply-config --insecure --nodes ${WORKER2IP} --file clusters/main/talos/generated/main-k8s-worker-2.yaml
+talosctl --talosconfig clusters/.talos/config apply-config --insecure --nodes ${CONTROL1_IP} --file clusters/main/talos/generated/main-k8s-control-1.yaml
+talosctl --talosconfig clusters/.talos/config apply-config --insecure --nodes ${WORKER1_IP} --file clusters/main/talos/generated/main-k8s-worker-1.yaml
 
 # 3) Restart kubelet/containerd by rebooting the node if needed
-talosctl --talosconfig clusters/.talos/config reboot --nodes ${MASTER2IP}
-talosctl --talosconfig clusters/.talos/config reboot --nodes ${WORKER2IP}
+talosctl --talosconfig clusters/.talos/config reboot --nodes ${CONTROL1_IP}
+talosctl --talosconfig clusters/.talos/config reboot --nodes ${WORKER1_IP}
 ```
 
 Containerd example (non-Talos reference)

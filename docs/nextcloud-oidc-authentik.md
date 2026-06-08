@@ -8,8 +8,8 @@ Nextcloud doesn’t have built-in OIDC login. The typical approach is:
 
 ## Prerequisites
 
-- Nextcloud is reachable at `https://cloud.${DOMAIN_0}`
-- Authentik is reachable at `https://auth.${DOMAIN_0}`
+- Nextcloud is deployed and reachable at `https://cloud.${DOMAIN_0}`
+- Authentik is deployed and reachable at `https://auth.${DOMAIN_0}`
 
 ## 1) Install the Nextcloud OIDC login app
 
@@ -49,7 +49,9 @@ The OIDC login app reads Nextcloud “system config” keys. You can set them vi
 
 If Nextcloud says the discovery endpoint is not reachable, check what `auth.${DOMAIN_0}` resolves to **from inside the Nextcloud pod**. If it resolves to a private/local IP (common with internal Gateway/LB IPs), Nextcloud may block the request due to SSRF protections unless `allow_local_remote_servers` is enabled.
 
-This repo already supports enabling it via Helm (`nextcloud.general.force_enable_allow_local_remote_servers: true` in `clusters/main/kubernetes/apps/nextcloud/app/helm-release.yaml`).
+The bundled Nextcloud HelmRelease supports enabling it via Helm
+(`nextcloud.general.force_enable_allow_local_remote_servers: true` in
+`clusters/main/kubernetes/apps/nextcloud/app/helm-release.yaml`).
 
 Set these values (replace `<authentik-provider-slug>`, `<client-id>`, `<client-secret>`):
 

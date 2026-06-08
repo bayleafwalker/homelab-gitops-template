@@ -12,7 +12,8 @@ This repo supports two bootstrap styles:
 - **ClusterTool-assisted path**: use TrueCharts/TrueForge ClusterTool for
   generation and bootstrap helpers. The repo keeps `clusterenv.yaml` and
   `talconfig.yaml` compatible with that workflow, but it is not an official
-  ClusterTool-generated template.
+  ClusterTool-generated template. If you use ClusterTool, keep its expected
+  presets defined in `clusterenv.yaml` even for bundled services you disable.
 
 For public template readiness, upstream dependency tradeoffs, and license
 notes, review `docs/template-publishing.md`.
@@ -54,7 +55,8 @@ Define these before editing manifests:
 | Kubernetes service host IP | hostNetwork helpers and API egress policies |
 | LoadBalancer range | MetalLB/Cilium L2 pools and fixed service IPs |
 | Internal Gateway IP | Gateway API HTTP routing |
-| Optional registry IP/host | private image mirror and node runtime registry patch |
+| ClusterTool/static service IP presets | ClusterTool inputs and retained LoadBalancer service examples |
+| Optional registry IP/host | private image mirror and node runtime registry patch, if retained |
 | Optional trusted VPN CIDR | LDAP/outpost and selected internal access policies |
 | Primary app domain | `${DOMAIN_0}` hostnames, certificates, Blocky/k8s_gateway |
 | Base/local domain | `${DOMAIN_HOST}` local infra names such as TrueNAS/OPNSense |
@@ -74,7 +76,7 @@ Recommended network shape:
   `${SVCNET}` unless you intentionally choose a different Kubernetes service
   network layout.
 - A flat LAN is fine for a small starter lab; use `LAN_CIDR`,
-  `VLAN20_GATEWAY`, and `VLAN20_CIDR` as "cluster node subnet" values even if
+  `CLUSTER_NODE_GATEWAY`, and `CLUSTER_NODE_CIDR` as "cluster node subnet" values even if
   you are not literally using VLAN 20.
 - The template makes an opinionated certificate choice: Cloudflare DNS-01 via
   `${DOMAIN_0_CLOUDFLARE_TOKEN}`. Other DNS providers are possible, but require
@@ -102,12 +104,12 @@ For each node, decide:
 - Whether it needs GPU, Coral, or storage mounts.
 - Whether a small cluster should set `allowSchedulingOnControlPlanes: true`.
 
-The sample `talconfig.yaml` starts with `k8s-control-2`, while
-`MASTER1IP` is retained for clustertool compatibility. You can either keep that
-sample numbering, add a real `k8s-control-1` node with matching variables, or
-rename the sample nodes to a clearer sequence. When adding future nodes, add
-both the variables in `clusterenv.yaml` and the matching node entry or patch in
-`clusters/main/talos/talconfig.yaml`.
+The sample `talconfig.yaml` uses straightforward `k8s-control-1..3`,
+`k8s-worker-1..2`, and `k8s-gpu-1` hostnames with matching `CONTROL*`,
+`WORKER*`, and `GPU_WORKER*` variables. When adding future nodes, add both the
+variables in `clusterenv.yaml` and the matching node entry or patch in
+`clusters/main/talos/talconfig.yaml`. Keep `MASTER1IP` equal to `CONTROL1_IP`
+for ClusterTool compatibility.
 
 Primary file:
 

@@ -10,7 +10,7 @@ spec:
   externalTrafficPolicy: Local
   loadBalancerSourceRanges:
     - ${LAN_CIDR}
-    - ${VLAN20_CIDR}
+    - ${CLUSTER_NODE_CIDR}
     - ${TRUSTED_VPN_CIDR}
   selector:
     app: authentik-ldap-outpost

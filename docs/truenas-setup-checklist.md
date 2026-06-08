@@ -1,20 +1,31 @@
 # TrueNAS Storage Setup Checklist
 
-Use this checklist to complete the TrueNAS storage integration.
+Use this checklist to decide whether to keep the bundled TrueNAS storage
+example and to adapt it to your environment before bootstrap. The repo includes
+example Kubernetes manifests for a `truenas-rwx` StorageClass, Omada RWX
+storage, Longhorn NFS backups, and Longhorn RecurringJobs, but they are not
+evidence that your TrueNAS system or cluster has already been configured.
 
-## ✅ Completed (Kubernetes Configuration)
+## Bundled template manifests
 
-- [x] Created `truenas-rwx` StorageClass at `clusters/main/kubernetes/system/truenas-rwx/`
-- [x] Created PV/PVC for Omada Controller
-- [x] Updated Omada Controller to use TrueNAS storage via `existingClaim`
-- [x] Configured Longhorn backup target to TrueNAS NFS share
-- [x] Added RecurringJob CRs for automated backups (daily Omada, weekly all)
-- [x] Added truenas-rwx to system kustomization.yaml
-- [x] Created comprehensive documentation at `docs/truenas-storage.md`
+Review and keep, edit, or remove these examples:
 
-## 📋 Required TrueNAS Configuration
+- `clusters/main/kubernetes/system/truenas-rwx/` - NFS-backed RWX StorageClass,
+  PV, and PVC examples.
+- `clusters/main/kubernetes/system/longhorn/app/` - Longhorn backup target and
+  RecurringJob examples.
+- `clusters/main/kubernetes/network/omada-controller/app/` - example service
+  using a TrueNAS-backed existing PVC.
+- `docs/truenas-storage.md` - deeper operational notes and troubleshooting.
 
-Complete these steps on your TrueNAS system:
+If you do not use TrueNAS, remove `truenas-rwx/ks.yaml` from the system
+`kustomization.yaml`, remove or replace the Longhorn backup target, and adjust
+any services that reference `truenas-weave-pvc`.
+
+## Required TrueNAS configuration
+
+Complete these steps on your own TrueNAS system before enabling the bundled
+manifests:
 
 ### 1. Create Dataset Structure
 ```bash
@@ -74,13 +85,12 @@ rm /tmp/nfs-test/test-file
 umount /tmp/nfs-test
 ```
 
-## 🚀 Deploy to Cluster
+## Deploy to cluster
 
-After TrueNAS is configured:
+After TrueNAS is configured and the manifests are adapted:
 
 ### 1. Commit and Push Changes
 ```bash
-cd /projects/dev/homelab
 git add clusters/main/kubernetes/system/truenas-rwx/
 git add clusters/main/kubernetes/system/longhorn/app/
 git add clusters/main/kubernetes/network/omada-controller/app/
@@ -93,7 +103,7 @@ git commit -m "Add TrueNAS storage integration
 - Configure Longhorn backup target to TrueNAS NFS
 - Add automated backup RecurringJobs (daily/weekly)
 - Migrate Omada Controller to TrueNAS storage
-- Add comprehensive TrueNAS setup documentation"
+- Add TrueNAS setup documentation"
 
 git push
 ```
@@ -104,7 +114,7 @@ git push
 flux reconcile source git cluster
 flux reconcile kustomization flux-entry
 
-# Watch for truenas-rwx to be ready
+# Watch for truenas-rwx to become ready
 flux get ks -A | grep truenas
 kubectl get storageclass truenas-rwx
 kubectl get pv truenas-weave-pv
@@ -113,7 +123,7 @@ kubectl get pvc -n omada-controller truenas-weave-pvc
 
 ### 3. Verify Longhorn Configuration
 ```bash
-# Check Longhorn settings updated
+# Check Longhorn settings after reconciliation
 kubectl get settings.longhorn.io -n longhorn-system backup-target -o yaml
 
 # Port-forward to Longhorn UI
@@ -126,10 +136,10 @@ kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
 
 ### 4. Verify RecurringJobs
 ```bash
-# Check recurring jobs created
+# Check recurring jobs after reconciliation
 kubectl get recurringjobs.longhorn.io -n longhorn-system
 
-# Expected output:
+# Example output after the template examples are applied:
 # NAME                      AGE
 # omada-daily-backup        Xm
 # weekly-full-backup        Xm
@@ -173,7 +183,7 @@ kubectl get backups -n longhorn-system
 # On TrueNAS: ls -la /mnt/storage_layer/weave/longhorn-backups/
 ```
 
-## 📊 Monitoring
+## Monitoring
 
 ### Check Backup Status
 ```bash
@@ -210,7 +220,7 @@ flux get ks -n flux-system longhorn
 flux logs --kind=Kustomization --name=truenas-rwx
 ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 If you encounter issues, see `docs/truenas-storage.md` section "Troubleshooting" for:
 - NFS mount failures
@@ -231,7 +241,7 @@ flux suspend kustomization flux-entry
 flux resume kustomization flux-entry
 ```
 
-## 📚 Next Steps
+## Next steps
 
 After basic setup is working:
 
@@ -252,9 +262,9 @@ After basic setup is working:
    - Set ZFS quotas based on actual usage
    - Consider snapshots on TrueNAS side for additional protection
 
-## 📝 Configuration Summary
+## Template configuration summary
 
-**What was added:**
+**Bundled examples:**
 
 - **StorageClass:** `truenas-rwx` (cluster-wide)
 - **PersistentVolume:** `truenas-weave-pv` → `/mnt/storage_layer/weave/rwx`
@@ -264,7 +274,7 @@ After basic setup is working:
   - `omada-daily-backup` - 2 AM, 7 day retention
   - `weekly-full-backup` - Sunday 1 AM, 4 week retention
 
-**What was modified:**
+**Template files to review if you keep this integration:**
 
 - `clusters/main/kubernetes/system/kustomization.yaml` - added truenas-rwx
 - `clusters/main/kubernetes/system/longhorn/app/helm-release.yaml` - backup target

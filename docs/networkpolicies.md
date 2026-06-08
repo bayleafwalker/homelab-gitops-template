@@ -9,7 +9,7 @@ This repo is moving toward “default-deny per namespace” with explicit allows
 
 Many controllers/operators (CNPG, VolSync, cert-manager, etc.) must talk to the Kubernetes API.
 
-In this cluster, the API can be reached via:
+In this template, policies should account for both common API paths:
 - The Service `kubernetes.default` (ClusterIP `${KUBERNETES_SERVICE_HOST_IP}:443`)
 - The control-plane node IP on `:6443`
 
@@ -19,9 +19,11 @@ When allowing egress to the API, prefer a selector-based `NetworkPolicy` that ta
 
 ### If egress to node IP is still blocked under Cilium
 
-We observed a failure mode where pods under default-deny could resolve DNS but could not connect to the API via the control-plane node IP (`:6443`) until an explicit Cilium policy allowed egress to host/remote-node.
+One common failure mode is pods under default-deny resolving DNS successfully
+but timing out against the API via the control-plane node IP (`:6443`) until an
+explicit Cilium policy allows egress to host/remote-node.
 
-Mitigation used here:
+Mitigation included in the template:
 - A `CiliumClusterwideNetworkPolicy` allows egress to `toEntities: [host, remote-node]` on ports `443` and `6443` for selected namespaces.
 
 This policy lives in `clusters/main/kubernetes/system/networkpolicies/app/` and is intended to cover the “pod → node IP” path in a Cilium-managed dataplane.
@@ -33,9 +35,10 @@ This policy lives in `clusters/main/kubernetes/system/networkpolicies/app/` and 
 
 ## Talos / node IP stability
 
-We hit an outage when the control-plane advertised a Tailscale IP as the node `InternalIP`, breaking “pod → apiserver” connectivity.
+If the control plane advertises a VPN IP, such as a Tailscale address, as the
+node `InternalIP`, pod-to-apiserver connectivity can break.
 
-Mitigation used here:
+Mitigation included in the template:
 - Pin kubelet `node-ip` to the LAN address in Talos (see `clusters/main/talos/patches/controlplane.yaml`).
 
 ## Troubleshooting checklist
@@ -60,12 +63,12 @@ If a namespace goes unhealthy after applying default-deny:
    - app-specific allows (Gateway API ingress, HTTPS egress, API access, etc.)
 3) Verify health, then expand to additional namespaces one-by-one.
 
-## Current Enforcement Status
+## Template coverage
 
-Baseline `default-deny` coverage now exists for most workload namespaces, with manifests under:
+Baseline `default-deny` examples exist for many workload namespaces, with manifests under:
 - `clusters/main/kubernetes/system/networkpolicies/app/`
 
-`gatus` now runs in Track A steady state:
+The bundled `gatus` policy set is designed for a Track A steady state:
 - Namespace-wide `default-deny` is active for `gatus` with explicit DNS and ingress allowances.
 - `gatus` monitors internal service paths only (`*.svc.cluster.local`).
 - Edge/public-path monitoring is owned by `blackbox-exporter`.

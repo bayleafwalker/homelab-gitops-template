@@ -6,14 +6,14 @@ hardware transcoding, or an AI/ML workload doing inference).
 
 Substitute your own node name, IP, and GPU model for the examples below —
 this guide was written against a GeForce GTX 1060 3GB on a node named
-`k8s-worker-1`, but the steps generalize to any consumer NVIDIA GPU.
+`k8s-gpu-1`, but the steps generalize to any consumer NVIDIA GPU.
 
 ## Hardware
 - **GPU**: NVIDIA GeForce GTX 1060 3GB (GP106) — *example; substitute your card*
 - **PCI Address**: 0000:07:00.0 — *example; find yours with `lspci | grep -i nvidia`*
-- **Node**: k8s-worker-1 — *example; substitute your worker's name*
+- **Node**: k8s-gpu-1 — *example; substitute your worker's name*
 
-## Changes Made
+## Template changes to review
 
 ### 1. Talos Configuration (talconfig.yaml)
 Enable GPU support on the target worker node:

@@ -36,12 +36,8 @@ HOMELAB_API_VIP: 192.168.1.10
 # template mostly uses HOMELAB_API_VIP.
 VIP: 192.168.1.10
 
-# clustertool compatibility: MASTER1IP is required by some clustertool flows.
-# The sample talconfig currently starts at k8s-control-2, so MASTER1IP is a
-# reserved example value unless you add a k8s-control-1 node. If you do, add a
-# matching node entry in clusters/main/talos/talconfig.yaml with its own
-# MASTER1IP_IP / MASTER1_MAC style variables, or rename the existing sample
-# nodes to a clearer control-1/control-2/control-3 sequence.
+# ClusterTool requires this preset in some flows. Keep it equal to CONTROL1_IP.
+# The rest of the template uses CONTROL1_IP directly.
 MASTER1IP: 192.168.1.11
 
 ###############################################################################
@@ -51,34 +47,27 @@ MASTER1IP: 192.168.1.11
 # The template ships with a larger reference topology: three control-plane
 # nodes, two generic workers, and one GPU/Coral worker. For a 1-2 node cluster,
 # trim `clusters/main/talos/talconfig.yaml` and remove unused entries here.
-#
-# Naming note: MASTER2IP_IP is historical and awkward, but it is currently what
-# talconfig.yaml consumes. For new nodes, prefer clearer names such as
-# CONTROL1_IP / CONTROL1_MAC, then update talconfig.yaml to match.
 
 # Control-plane examples used by talconfig.yaml.
-MASTER2IP: 192.168.1.12
-MASTER2IP_IP: 192.168.1.12
-MASTER2IP_CIDR: 192.168.1.12/24
-MASTER2_MAC: "00:11:22:33:44:52"
+CONTROL1_IP: 192.168.1.11
+CONTROL1_CIDR: 192.168.1.11/24
+CONTROL1_MAC: "00:11:22:33:44:51"
 
-MASTER3IP: 192.168.1.13
-MASTER3IP_IP: 192.168.1.13
-MASTER3IP_CIDR: 192.168.1.13/24
-MASTER3_MAC: "00:11:22:33:44:53"
+CONTROL2_IP: 192.168.1.12
+CONTROL2_CIDR: 192.168.1.12/24
+CONTROL2_MAC: "00:11:22:33:44:52"
 
-MASTER4IP_IP: 192.168.1.14
-MASTER4IP_CIDR: 192.168.1.14/24
-MASTER4_MAC: "00:11:22:33:44:54"
+CONTROL3_IP: 192.168.1.13
+CONTROL3_CIDR: 192.168.1.13/24
+CONTROL3_MAC: "00:11:22:33:44:53"
 
-# Worker examples. WORKER4IP/WORKER5IP are not in the default node list; they
-# are provided because optional patch examples reference them and to show how
-# additional worker IPs should be added before extending talconfig.yaml.
-WORKERGPU1IP: 192.168.1.51
-WORKER2IP: 192.168.1.62
-WORKER3IP: 192.168.1.63
-WORKER4IP: 192.168.1.64
-WORKER5IP: 192.168.1.65
+# Worker examples. WORKER3_IP/WORKER4_IP are not in the default node list; they
+# show how to reserve additional worker IPs before extending talconfig.yaml.
+GPU_WORKER1_IP: 192.168.1.51
+WORKER1_IP: 192.168.1.61
+WORKER2_IP: 192.168.1.62
+WORKER3_IP: 192.168.1.63
+WORKER4_IP: 192.168.1.64
 
 ###############################################################################
 # 3. Network plan
@@ -89,13 +78,13 @@ WORKER5IP: 192.168.1.65
 # and firewall policy isolated from general client devices. A flat LAN works
 # for small labs, but reserve all node/VIP/LB addresses outside DHCP.
 #
-# Historical name: VLAN20_* means "cluster node subnet" in this template. You
-# can use VLAN 20, another VLAN, or no VLAN; keep the variable names unless you
-# update every consumer.
 LAN_CIDR: 192.168.1.0/24
 GATEWAY: 192.168.1.1
-VLAN20_GATEWAY: 192.168.1.1
-VLAN20_CIDR: 192.168.1.0/24
+
+# Clear template names for the subnet where Talos nodes live. This may be a
+# dedicated VLAN, another routed subnet, or the same flat LAN as above.
+CLUSTER_NODE_GATEWAY: 192.168.1.1
+CLUSTER_NODE_CIDR: 192.168.1.0/24
 
 # Pod/service networks are internal to Kubernetes. Avoid overlap with LAN,
 # VPN, Docker, and site-to-site networks.
@@ -109,27 +98,29 @@ KUBERNETES_SERVICE_HOST_CIDR: 172.17.0.1/32
 TRUSTED_VPN_CIDR: 10.0.0.0/24
 
 # LoadBalancer pool advertised on the cluster subnet. Keep this range outside
-# DHCP and outside node IPs. HOMELAB_* names are the active variables used by
-# Cilium/MetalLB resources; METALLB_RANGE is kept as a compatibility alias for
-# older docs/manifests.
+# DHCP and outside node IPs. ClusterTool expects a complete preset surface here,
+# even for services you later remove. HOMELAB_* names are the active variables
+# used by Cilium/MetalLB resources; METALLB_RANGE is kept as a compatibility
+# alias for older docs/manifests.
 HOMELAB_METALLB_RANGE: 192.168.1.200-192.168.1.220
 HOMELAB_LB_START: 192.168.1.200
 HOMELAB_LB_STOP: 192.168.1.220
 METALLB_RANGE: 192.168.1.200-192.168.1.220
 
-# Fixed service IPs from the LoadBalancer range. Adjust or delete services you
-# do not plan to run before first bootstrap.
-GATEWAY_INTERNAL_IP: 192.168.1.219   # Cilium Gateway API HTTPS entrypoint.
-POSTGRES_LB_IP: 192.168.1.220       # Optional external PostgreSQL LB example.
-REGISTRY_IP: 192.168.1.221          # Optional registry mirror; must be in your real pool if enabled.
+# Fixed service IP presets. If you use ClusterTool, keep the full set defined
+# and assign safe placeholder/reserved values. If you use the direct Talos/Flux
+# path, a value is required only while a retained manifest references it.
+GATEWAY_INTERNAL_IP: 192.168.1.219   # Bundled Gateway API HTTPS entrypoint.
+POSTGRES_LB_IP: 192.168.1.220       # ClusterTool preset; Blocky DNS example may reference it.
+REGISTRY_IP: 192.168.1.221          # Bundled registry mirror example; must be in your real pool if enabled.
 REGISTRY_HOST: registry.apps.example.com
 REGISTRY_SERVICE_ENDPOINT: docker-registry.registry.svc.cluster.local:5000
-FORGEJO_SSH_IP: 192.168.1.218       # Optional Forgejo SSH LoadBalancer.
-SHELL_IP: 192.168.1.217             # Optional browser shell/code workspace helper.
-LDAP_OUTPOST_IP: 192.168.1.216      # Optional Authentik LDAP outpost.
-HEADLAMP_IP: 192.168.1.215          # Optional Headlamp fixed IP.
-BLOCKY_IP: 192.168.1.205            # Optional DNS sinkhole/cluster DNS frontend.
-OMADA_IP: 192.168.1.206             # Optional Omada controller LoadBalancer.
+FORGEJO_SSH_IP: 192.168.1.218       # Bundled Forgejo SSH LoadBalancer example.
+SHELL_IP: 192.168.1.217             # ClusterTool preset; Blocky DNS example may reference it.
+LDAP_OUTPOST_IP: 192.168.1.216      # Bundled Authentik LDAP outpost example.
+HEADLAMP_IP: 192.168.1.215          # ClusterTool preset; define even if Headlamp is disabled.
+BLOCKY_IP: 192.168.1.205            # Bundled DNS sinkhole/cluster DNS frontend example.
+OMADA_IP: 192.168.1.206             # Bundled Omada controller LoadBalancer example.
 
 # Optional directory backend CIDR used by Authentik's example egress policy.
 # If you do not integrate an external LDAP/directory backend, remove or disable

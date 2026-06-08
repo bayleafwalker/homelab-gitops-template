@@ -9,7 +9,7 @@ machine:
   kubelet:
     nodeIP:
       validSubnets:
-        - ${VLAN20_CIDR}
+        - ${CLUSTER_NODE_CIDR}
 cluster:
   controllerManager:
     extraArgs:

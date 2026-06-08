@@ -1,12 +1,14 @@
 # Obsidian Notes Setup
 
-The cluster uses local Obsidian apps for the full editor and Self-hosted LiveSync for device sync. The old `obsidian-remote` desktop container is parked at zero replicas.
+The template includes an Obsidian + CouchDB/Self-hosted LiveSync pattern for
+device sync. Use local Obsidian apps for the full editor. The old
+`obsidian-remote` desktop container example is parked at zero replicas.
 
 ## Services
 
 - CouchDB: `https://couchdb.${DOMAIN_0}`
-- LiveSync database: stored in the `obsidian-livesync-credentials` Secret in the `couchdb` namespace
-- Server vault path: `/vaults`, backed by the NFS `Creative` subdirectory
+- LiveSync database: stored in the `obsidian-livesync-credentials` Secret in the `couchdb` namespace after deployment
+- Server vault path: `/vaults`, backed by the NFS `Creative` subdirectory if you keep that storage example
 
 ## Local Obsidian Apps
 

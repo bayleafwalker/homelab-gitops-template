@@ -9,12 +9,12 @@ spec:
       - key: kubernetes.io/hostname
         operator: In
         values:
+          - k8s-control-1
           - k8s-control-2
           - k8s-control-3
-          - k8s-control-4
-          - k8s-worker-gpu-1
+          - k8s-gpu-1
+          - k8s-worker-1
           - k8s-worker-2
-          - k8s-worker-3
   serviceSelector:
     matchLabels:
       app.kubernetes.io/name: blocky

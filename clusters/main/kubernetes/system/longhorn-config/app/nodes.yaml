@@ -1,7 +1,22 @@
 apiVersion: longhorn.io/v1beta2
 kind: Node
 metadata:
-  name: k8s-worker-gpu-1
+  name: k8s-gpu-1
+  namespace: longhorn-system
+spec:
+  allowScheduling: true
+  disks:
+    default:
+      allowScheduling: true
+      diskType: filesystem
+      path: /var/mnt/longhorn
+      storageReserved: 0
+      tags: []
+---
+apiVersion: longhorn.io/v1beta2
+kind: Node
+metadata:
+  name: k8s-worker-1
   namespace: longhorn-system
 spec:
   allowScheduling: true
@@ -17,21 +32,6 @@ apiVersion: longhorn.io/v1beta2
 kind: Node
 metadata:
   name: k8s-worker-2
-  namespace: longhorn-system
-spec:
-  allowScheduling: true
-  disks:
-    default:
-      allowScheduling: true
-      diskType: filesystem
-      path: /var/mnt/longhorn
-      storageReserved: 0
-      tags: []
----
-apiVersion: longhorn.io/v1beta2
-kind: Node
-metadata:
-  name: k8s-worker-3
   namespace: longhorn-system
 spec:
   allowScheduling: true

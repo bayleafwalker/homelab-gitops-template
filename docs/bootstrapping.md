@@ -85,6 +85,12 @@ The bundled certificate path is opinionated around Cloudflare DNS-01. If your
 DNS zone is elsewhere, plan to replace the ClusterIssuer provider values before
 first reconcile.
 
+If you use ClusterTool, keep its required preset keys in `clusterenv.yaml`
+defined even when you disable the corresponding bundled service. Examples
+include `MASTER1IP`, `HEADLAMP_IP`, service LoadBalancer IP presets, and the
+MetalLB/Cilium range values. For the direct Talos/Flux path, you can remove a
+value only after you also remove or edit every manifest that references it.
+
 Key files to edit:
 
 - **`clusters/main/clusterenv.yaml`** — node IPs/MACs, VIP, gateway/CIDR,
@@ -99,10 +105,11 @@ Key files to edit:
   plane (or small control-plane-only cluster) can still run workloads. Remove
   the matching `${VARIABLE}` entries from `clusterenv.yaml` for any nodes you
   delete, and delete unused per-node patches under `clusters/main/talos/patches/`
-  (e.g. `worker3-nodeip.yaml`, `worker-gpu1-*.yaml` if you have no GPU node).
-  `MASTER1IP` exists for clustertool compatibility even though the sample node
-  list starts at `k8s-control-2`; either add a `k8s-control-1` entry or rename
-  the sample nodes to your preferred sequence.
+  (e.g. `worker2-nodeip.yaml`, `gpu-worker1-*.yaml` if you have no GPU node).
+  The sample now uses straightforward `CONTROL1_*`, `CONTROL2_*`,
+  `CONTROL3_*`, `WORKER1_IP`, `WORKER2_IP`, and `GPU_WORKER1_IP` names.
+  `MASTER1IP` is retained only because ClusterTool expects that preset; keep it
+  equal to `CONTROL1_IP`.
 - **`clusters/main/kubernetes/flux-system/flux/clustersettings.secret.yaml`**
   and **`cluster-secrets.secret.yaml`** — non-sensitive and sensitive
   cluster-wide values consumed by Flux's variable substitution. Both ship with

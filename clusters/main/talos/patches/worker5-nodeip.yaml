@@ -1,4 +1,0 @@
-machine:
-  kubelet:
-    extraArgs:
-      node-ip: ${WORKER5IP}

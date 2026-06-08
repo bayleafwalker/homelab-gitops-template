@@ -1,8 +1,10 @@
 # Forgejo onboarding
 
-Forgejo is exposed internally at `https://git.${DOMAIN_0}` via Gateway API.
+The template can expose Forgejo internally at `https://git.${DOMAIN_0}` via
+Gateway API after you keep and deploy the bundled Forgejo manifests.
 
-SSH is exposed separately at `forgejo-ssh.${DOMAIN_0}:2222` through the chart-managed `LoadBalancer` service.
+SSH is exposed separately at `forgejo-ssh.${DOMAIN_0}:2222` through the
+chart-managed `LoadBalancer` service when that service is enabled.
 
 ## Initial bootstrap
 
@@ -85,7 +87,8 @@ In Forgejo as an admin:
 
 ## Forgejo Actions runner
 
-The cluster now carries a dedicated Forgejo runner service under `clusters/main/kubernetes/system/forgejo-runner/`.
+The template includes a dedicated Forgejo runner service under
+`clusters/main/kubernetes/system/forgejo-runner/`.
 
 Current design:
 
@@ -120,18 +123,19 @@ Notes:
 
 ### Smoke verification
 
-The runner was verified end-to-end with `/projects/dev/knowledge-base/.forgejo/workflows/runner-smoke.yaml`.
+After deployment, verify the runner with a small workflow such as
+`.forgejo/workflows/runner-smoke.yaml`.
 
-Verified result:
+Example values to record for your own verification:
 
 - Repository: `your-username/knowledge-base`
 - Workflow file: `runner-smoke.yaml`
-- Run id: `1`
+- Run id: `<run-id>`
 - Event: `push`
-- Head SHA: `e338157dc47fbee13003d07356ecac579888a50f`
+- Head SHA: `<commit-sha>`
 - Status: `success`
-- Started: `2026-04-22T05:30:30Z`
-- Finished: `2026-04-22T05:31:17Z`
+- Started: `<timestamp>`
+- Finished: `<timestamp>`
 
 ## Notes
 

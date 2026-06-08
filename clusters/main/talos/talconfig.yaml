@@ -24,17 +24,38 @@ patches:
     - '@./patches/all.yaml'
     - '@./patches/registry.yaml'
 nodes:
-    - hostname: k8s-control-2
-      ipAddress: ${MASTER2IP_IP}
+    - hostname: k8s-control-1
+      ipAddress: ${CONTROL1_IP}
       controlPlane: true
       nameservers:
-        - ${VLAN20_GATEWAY}
+        - ${CLUSTER_NODE_GATEWAY}
       installDiskSelector:
         size: <= 160GB
       networkInterfaces:
         # suffix is the adapter mac adres.
         - deviceSelector:
-            hardwareAddr: "${MASTER2_MAC}"
+            hardwareAddr: "${CONTROL1_MAC}"
+          dhcp: true
+          vip:
+            ip: ${HOMELAB_API_VIP}
+      schematic:
+        customization:
+            systemExtensions:
+                officialExtensions:
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+      #              - siderolabs/qemu-guest-agent
+    - hostname: k8s-control-2
+      ipAddress: ${CONTROL2_IP}
+      controlPlane: true
+      nameservers:
+        - ${CLUSTER_NODE_GATEWAY}
+      installDiskSelector:
+        size: <= 160GB
+      networkInterfaces:
+        # suffix is the adapter mac adres.
+        - deviceSelector:
+            hardwareAddr: "${CONTROL2_MAC}"
           dhcp: true
           vip:
             ip: ${HOMELAB_API_VIP}
@@ -46,38 +67,17 @@ nodes:
                     - siderolabs/iscsi-tools
       #              - siderolabs/qemu-guest-agent
     - hostname: k8s-control-3
-      ipAddress: ${MASTER3IP_IP}
+      ipAddress: ${CONTROL3_IP}
       controlPlane: true
       nameservers:
-        - ${VLAN20_GATEWAY}
-      installDiskSelector:
-        size: <= 160GB
-      networkInterfaces:
-        # suffix is the adapter mac adres.
-        - deviceSelector:
-            hardwareAddr: "${MASTER3_MAC}"
-          dhcp: true
-          vip:
-            ip: ${HOMELAB_API_VIP}
-      schematic:
-        customization:
-            systemExtensions:
-                officialExtensions:
-                    - siderolabs/util-linux-tools
-                    - siderolabs/iscsi-tools
-      #              - siderolabs/qemu-guest-agent
-    - hostname: k8s-control-4
-      ipAddress: ${MASTER4IP_IP}
-      controlPlane: true
-      nameservers:
-        - ${VLAN20_GATEWAY}
+        - ${CLUSTER_NODE_GATEWAY}
       installDiskSelector:
         size: <= 300GB
         type: ssd
       networkInterfaces:
         # suffix is the adapter mac adres.
         - deviceSelector:
-            hardwareAddr: "${MASTER4_MAC}"
+            hardwareAddr: "${CONTROL3_MAC}"
           dhcp: true
           vip:
             ip: ${HOMELAB_API_VIP}
@@ -88,10 +88,10 @@ nodes:
                     - siderolabs/util-linux-tools
                     - siderolabs/iscsi-tools
       #              - siderolabs/qemu-guest-agent
-    - hostname: k8s-worker-gpu-1
-      ipAddress: ${WORKERGPU1IP}
+    - hostname: k8s-gpu-1
+      ipAddress: ${GPU_WORKER1_IP}
       nameservers:
-        - ${VLAN20_GATEWAY}
+        - ${CLUSTER_NODE_GATEWAY}
       installDiskSelector:
         size: <= 300GB
         type: ssd
@@ -106,8 +106,8 @@ nodes:
           filesystem:
             type: xfs
       patches:
-        - '@./patches/worker-gpu1-nodeip.yaml'
-        - '@./patches/worker-gpu1-labels.yaml'
+        - '@./patches/gpu-worker1-nodeip.yaml'
+        - '@./patches/gpu-worker1-labels.yaml'
         - '@./patches/nvidia.yaml'
         - '@./patches/coral.yaml'
         - '@./patches/storage-mounts.yaml'
@@ -120,10 +120,40 @@ nodes:
                     - siderolabs/gasket-driver
                     - siderolabs/util-linux-tools
                     - siderolabs/iscsi-tools
-    - hostname: k8s-worker-2
-      ipAddress: ${WORKER2IP}
+    - hostname: k8s-worker-1
+      ipAddress: ${WORKER1_IP}
       nameservers:
-        - ${VLAN20_GATEWAY}
+        - ${CLUSTER_NODE_GATEWAY}
+      installDiskSelector:
+        size: <= 300GB
+      userVolumes:
+        - name: longhorn
+          provisioning:
+            diskSelector:
+              # Select the larger data disk, avoid relying on serial.
+              # Match by size range (bytes). Tune if you add more large disks.
+              match: disk.size > 300000000000u && disk.size < 900000000000u
+            grow: true
+            # clustertool genconfig requires at least one of minSize/maxSize.
+            # These bounds are for the resulting partition/volume.
+            minSize: 200GiB
+            maxSize: 900GiB
+          filesystem:
+            type: xfs
+      patches:
+        - '@./patches/worker1-nodeip.yaml'
+        - '@./patches/storage-mounts.yaml'
+      schematic:
+        customization:
+            systemExtensions:
+                officialExtensions:
+                    - siderolabs/util-linux-tools
+                    - siderolabs/iscsi-tools
+      #             - siderolabs/qemu-guest-agent
+    - hostname: k8s-worker-2
+      ipAddress: ${WORKER2_IP}
+      nameservers:
+        - ${CLUSTER_NODE_GATEWAY}
       installDiskSelector:
         size: <= 300GB
       userVolumes:
@@ -142,36 +172,6 @@ nodes:
             type: xfs
       patches:
         - '@./patches/worker2-nodeip.yaml'
-        - '@./patches/storage-mounts.yaml'
-      schematic:
-        customization:
-            systemExtensions:
-                officialExtensions:
-                    - siderolabs/util-linux-tools
-                    - siderolabs/iscsi-tools
-      #             - siderolabs/qemu-guest-agent
-    - hostname: k8s-worker-3
-      ipAddress: ${WORKER3IP}
-      nameservers:
-        - ${VLAN20_GATEWAY}
-      installDiskSelector:
-        size: <= 300GB
-      userVolumes:
-        - name: longhorn
-          provisioning:
-            diskSelector:
-              # Select the larger data disk, avoid relying on serial.
-              # Match by size range (bytes). Tune if you add more large disks.
-              match: disk.size > 300000000000u && disk.size < 900000000000u
-            grow: true
-            # clustertool genconfig requires at least one of minSize/maxSize.
-            # These bounds are for the resulting partition/volume.
-            minSize: 200GiB
-            maxSize: 900GiB
-          filesystem:
-            type: xfs
-      patches:
-        - '@./patches/worker3-nodeip.yaml'
         - '@./patches/storage-mounts.yaml'
       schematic:
         customization:

@@ -38,7 +38,7 @@ spec:
       # routingMode: native
       hubble:
         enabled: false
-      # Talos OOM controller has SIGKILL'd the cilium-agent cgroup on k8s-worker-3.
+      # Talos OOM controller has SIGKILL'd the cilium-agent cgroup on k8s-worker-2.
       # Give Cilium a meaningful memory request to reduce its OOM kill priority and
       # a high (but finite) limit as a backstop.
       resources:

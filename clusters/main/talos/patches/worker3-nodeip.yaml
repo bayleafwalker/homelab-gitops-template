@@ -1,5 +1,4 @@
 machine:
   kubelet:
-    nodeIP:
-      validSubnets:
-        - ${VLAN20_CIDR}
+    extraArgs:
+      node-ip: ${WORKER3_IP}

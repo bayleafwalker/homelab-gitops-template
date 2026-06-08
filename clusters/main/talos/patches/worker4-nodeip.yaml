@@ -1,4 +1,4 @@
 machine:
   kubelet:
     extraArgs:
-      node-ip: ${WORKER4IP}
+      node-ip: ${WORKER4_IP}

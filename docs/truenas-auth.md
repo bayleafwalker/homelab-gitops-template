@@ -1,14 +1,18 @@
 # TrueNAS auth integration options
 
-TrueNAS isn’t managed by Flux in this repo, but you can still standardize access around Authentik.
+TrueNAS isn’t managed by Flux in this repo, but the template includes patterns
+for standardizing access around Authentik after you adapt and deploy the
+cluster manifests.
 
 ## Option A: LDAP (directory services)
 
 Best when you want TrueNAS users/groups to come from an IdP.
 
-1) Ensure the Authentik LDAP outpost is enabled (it is in `clusters/main/kubernetes/apps/authentik/app/helm-release.yaml`).
+1) If you keep Authentik, ensure the LDAP outpost values are enabled in
+   `clusters/main/kubernetes/apps/authentik/app/helm-release.yaml`.
 2) Expose the LDAP outpost to TrueNAS (e.g. a dedicated internal `LoadBalancer` service on `TCP/389` and/or `TCP/636`).
-   - This repo publishes it via `clusters/main/kubernetes/apps/authentik-ldap-outpost/app/service-lb.yaml`.
+   - The template includes an example service at
+     `clusters/main/kubernetes/apps/authentik-ldap-outpost/app/service-lb.yaml`.
 3) In TrueNAS UI: Directory Services → LDAP:
    - Server: `<ldap-outpost-address>`
    - Base DN: `${DN}` (same base configured for the outpost)

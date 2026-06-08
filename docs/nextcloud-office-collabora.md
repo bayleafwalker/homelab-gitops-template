@@ -1,6 +1,9 @@
 # Nextcloud Office + Collabora Online
 
-This cluster already runs Nextcloud (`clusters/main/kubernetes/apps/nextcloud`). To add browser-based office editing on the LAN, run a Collabora Online server in-cluster and point the Nextcloud Office app at it.
+The template includes a Nextcloud app example under
+`clusters/main/kubernetes/apps/nextcloud`. To add browser-based office editing
+on the LAN after Nextcloud is deployed, run a Collabora Online server
+in-cluster and point the Nextcloud Office app at it.
 
 Alternative: install the Nextcloud app **Collabora Online - Built-in CODE Server** (`richdocumentscode`) instead of running a separate Collabora service. It’s simpler, but it’s harder to tune/scale independently and ties Office availability to the Nextcloud pod lifecycle.
 
@@ -40,4 +43,6 @@ If you want `office.${DOMAIN_0}` LAN-only, keep DNS resolving to the internal Ga
 
 This warning means Collabora can’t use `mount(2)`/bind-mounts inside the container, so it falls back to copying the system template into each “jail”. Editing still works, but startup/opening documents is slower.
 
-This repo sets a less-restrictive container security context for Collabora to allow bind-mounting (see `securityContext` in `clusters/main/kubernetes/apps/collabora/app/helm-release.yaml`).
+The bundled Collabora example sets a less-restrictive container security
+context to allow bind-mounting (see `securityContext` in
+`clusters/main/kubernetes/apps/collabora/app/helm-release.yaml`).
