@@ -428,7 +428,9 @@ spec:
 - Operations guide: `docs/operations.md`
 - Version tracking: `docs/releases.md`
 - Secrets guide: `docs/secrets.md`
-- Template publishing assessment: `docs/template-publishing.md`
+- Template positioning and upstream dependencies: `docs/template-publishing.md`
 - Flux documentation: https://fluxcd.io/docs/
 - TrueCharts catalog/docs: https://truecharts.org/
-- TrueCharts ClusterTool getting started: https://truecharts.org/clustertool/getting-started/
+- TrueCharts ForgeTool/ClusterTool getting started: https://truecharts.org/clustertool/getting-started/
+- Older TrueCharts guide URL sometimes seen in bookmarks: https://truecharts.org/guides/clustertool/getting-started/
+- bjw-s app-template documentation: https://bjw-s-labs.github.io/helm-charts/docs/app-template

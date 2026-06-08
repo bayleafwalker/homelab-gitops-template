@@ -1,6 +1,6 @@
 clusterName: ${CLUSTERNAME}
 # renovate: datasource=docker depName=siderolabs/installer repository=https://ghcr.io
-talosVersion: v1.13.3
+talosVersion: v1.13.0
 # renovate-disabled: datasource=docker depName=ghcr.io/siderolabs/kubelet
 kubernetesVersion: v1.36.1
 endpoint: https://${HOMELAB_API_VIP}:6443

@@ -4,19 +4,25 @@ This is the shortest path from "I copied the template" to "I know what to
 change before bootstrap." Use `docs/bootstrapping.md` for command-by-command
 execution once these inputs are decided.
 
-This repo supports two bootstrap styles:
+This template is a complete worked example, not the canonical documentation for
+every project it uses. Use upstream TrueCharts/TrueForge docs for the supported
+ForgeTool/ClusterTool flow, official Talos and Flux docs for platform behavior,
+and chart-specific docs for application values. Use this template to see how those
+pieces are composed into one GitOps tree.
+
+This template supports two bootstrap styles:
 
 - **Direct Talos/Flux path**: use `talhelper`, `talosctl`, `sops`, and
   `flux bootstrap` directly. This is the clearest path for understanding what
   each layer does.
-- **ClusterTool-assisted path**: use TrueCharts/TrueForge ClusterTool for
-  generation and bootstrap helpers. The repo keeps `clusterenv.yaml` and
+- **ForgeTool/ClusterTool-assisted path**: use the TrueCharts/TrueForge tool
+  for generation and bootstrap helpers. The repo keeps `clusterenv.yaml` and
   `talconfig.yaml` compatible with that workflow, but it is not an official
-  ClusterTool-generated template. If you use ClusterTool, keep its expected
-  presets defined in `clusterenv.yaml` even for bundled services you disable.
+  tool-generated template. If you use that path, keep its expected presets
+  defined in `clusterenv.yaml` even for bundled services you disable.
 
-For public template readiness, upstream dependency tradeoffs, and license
-notes, review `docs/template-publishing.md`.
+For template positioning, upstream dependency tradeoffs, and derived-template
+publishing guidance, review `docs/template-publishing.md`.
 
 ## 1. Local tools and keys
 

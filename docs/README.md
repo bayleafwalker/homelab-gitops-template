@@ -1,12 +1,17 @@
 # Documentation index
 
+This template includes positioning guidance in `template-publishing.md`: where
+the repository is useful as a complete worked example, and where upstream
+TrueCharts/TrueForge, Talos, Flux, or chart project documentation remains the
+better source of truth.
+
 ## Core (agent entrypoints)
 - `onboarding.md` — first-time checklist for required values, dependencies, storage, networking, and service ramp-up.
 - `bootstrapping.md` — start-to-finish guide for standing up a 1-2 node cluster from this template (newcomer entrypoint).
 - `prompt-guide.md` — AI agent entrypoint (scope, guardrails, and validation).
 - `architecture.md` — high-level architecture and component map.
 - `service-deployment-guide.md` — service layout/patterns and day-2 workflows.
-- `template-publishing.md` — template-readiness, TrueCharts dependency, upstream-reference, and license/publishing assessment.
+- `template-publishing.md` — template positioning, TrueCharts dependency posture, upstream references, and publishing guidance.
 - `operations.md` — bootstrap and operational runbooks (Flux, DNS/Gateway API, monitoring, backups).
 - `secrets.md` — SOPS/age rules and safe secret-handling patterns.
 - `releases.md` — version pinning and upgrade workflow.

@@ -1,6 +1,6 @@
 # GitHub Actions runners (self-hosted)
 
-This repo deploys a self-hosted GitHub Actions runner scale set onto the cluster using Actions Runner Controller (ARC).
+This template deploys a self-hosted GitHub Actions runner scale set onto the cluster using Actions Runner Controller (ARC).
 
 Manifests:
 - `clusters/main/kubernetes/system/github-actions-runner/`
@@ -21,7 +21,7 @@ Manifests:
    - **Private key**: generated in the GitHub App (PEM)
 3. Put the GitHub App credentials into the SOPS secret (kept in `flux-system` and mirrored into `arc-runners` by kubernetes-reflector):
    - `sops clusters/main/kubernetes/flux-system/flux/arc-github-app.secret.yaml`
-   - This repo supports IDs via substitution (`${GITHUB_APP_ID}` / `${GITHUB_APP_INSTALLATION_ID}` from `cluster-secrets.secret.yaml`), but the recommended approach is to put the **private key PEM** directly in `github_app_private_key` here.
+   - This template supports IDs via substitution (`${GITHUB_APP_ID}` / `${GITHUB_APP_INSTALLATION_ID}` from `cluster-secrets.secret.yaml`), but the recommended approach is to put the **private key PEM** directly in `github_app_private_key` here.
    - This is intentionally a dedicated secret (avoid mirroring the full `cluster-secrets` into the runner namespace).
 4. Reconcile:
     - `direnv exec . flux reconcile kustomization github-actions-runner -n flux-system`

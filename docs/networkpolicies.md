@@ -1,6 +1,6 @@
 # Baseline NetworkPolicies
 
-This repo is moving toward “default-deny per namespace” with explicit allows for:
+This template is moving toward “default-deny per namespace” with explicit allows for:
 - DNS egress (CoreDNS)
 - Ingress from the Gateway dataplane (for services exposed via Gateway API `HTTPRoute`)
 - Minimal egress required by the workload (e.g., HTTPS to public endpoints for probes/backups)

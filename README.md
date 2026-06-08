@@ -1,11 +1,31 @@
 
 # homelab-gitops-template
 
-A full-reference GitOps template for a Talos-based Kubernetes homelab managed by Flux, SOPS/age, and either TrueCharts/TrueForge ClusterTool or a direct Talos/Flux workflow. It is meant to be copied, renamed, and trimmed to your hardware and services. Flux continuously reconciles the desired state under `clusters/main`, while secrets stay encrypted with SOPS/age.
+A full-reference GitOps template for a Talos-based Kubernetes homelab managed by Flux, SOPS/age, and either the TrueCharts/TrueForge ForgeTool/ClusterTool workflow or a direct Talos/Flux workflow. It is meant to be copied, renamed, and trimmed to your hardware and services. Flux continuously reconciles the desired state under `clusters/main`, while secrets stay encrypted with SOPS/age.
 
 This is an independent template. It is not an official TrueCharts or TrueForge
 distribution, although many included examples depend on TrueCharts charts and
 ClusterTool-compatible configuration files.
+
+## Positioning
+
+Use this template when you want a worked example of a complete Talos + Flux homelab:
+cluster configuration, encrypted substitutions, Gateway API routing, storage,
+backup patterns, monitoring, and several app deployments in one tree.
+
+Prefer upstream guidance or another starting point when that is the real goal:
+
+- Use the TrueCharts/TrueForge docs for the supported ForgeTool/ClusterTool
+  bootstrap flow and TrueCharts chart-specific values. This template is a downstream
+  consumer of those projects, not their support boundary.
+- Use official Talos and Flux docs when you want to learn or debug the platform
+  primitives without this template's service opinions.
+- Use upstream project Helm charts, `bjw-s/app-template`, or locally-owned
+  manifests for critical services where long-term chart-source independence is
+  more important than sharing TrueCharts values.
+
+Detailed positioning and upstream links are in
+[`docs/template-publishing.md`](docs/template-publishing.md).
 
 ## Stack at a glance
 
@@ -58,7 +78,7 @@ Then use this short loop:
    plan to keep. The template ships with placeholder `*.secret.yaml` files so it
    can be public; do not commit your real values until they are SOPS-encrypted.
 4. Size `clusters/main/talos/talconfig.yaml` to your actual node count, then
-   generate/apply Talos machine configs with ClusterTool or the direct
+   generate/apply Talos machine configs with ForgeTool/ClusterTool or the direct
    talhelper/talosctl path:
    ```bash
    clustertool genconfig
@@ -87,7 +107,7 @@ Useful local helpers:
 - `docs/onboarding.md` — **start here if you're new**: the values, dependencies, and services to decide before bootstrap.
 - `docs/bootstrapping.md` — step-by-step guide to standing up a 1-2 node cluster from this template.
 - `docs/architecture.md` — core architecture and components.
-- `docs/template-publishing.md` — template-readiness, TrueCharts dependency, upstream-reference, and publishing/license assessment.
+- `docs/template-publishing.md` — template positioning, TrueCharts dependency posture, upstream references, and publishing guidance.
 - `docs/operations.md` — bootstrap and day-2 workflows.
 - `docs/releases.md` — version pinning and upgrade guidance.
 - `docs/secrets.md` — SOPS/age usage and secret handling.
@@ -97,5 +117,5 @@ Useful local helpers:
 
 [MIT](LICENSE) — use this template freely for your own homelab. External charts,
 tools, images, and linked documentation keep their own licenses; see
-[`docs/template-publishing.md`](docs/template-publishing.md) before publishing a
-derived public template.
+[`docs/template-publishing.md`](docs/template-publishing.md) for positioning,
+third-party dependency, and derived-template publishing guidance.

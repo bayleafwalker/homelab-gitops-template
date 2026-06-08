@@ -114,6 +114,9 @@ Key files to edit:
   and **`cluster-secrets.secret.yaml`** — non-sensitive and sensitive
   cluster-wide values consumed by Flux's variable substitution. Both ship with
   `REPLACE_WITH_*` placeholders and header comments explaining each field.
+  Keep `CLUSTERNAME` at the bottom of `clustersettings.secret.yaml`; ClusterTool
+  may append it there if it is placed elsewhere, which can create duplicate-key
+  YAML.
 - **`clusters/main/kubernetes/flux-system/flux/deploykey.secret.yaml`** —
   generate a fresh deploy keypair (`ssh-keygen -t ecdsa -b 384`), add the
   public half as a read-only deploy key on your Git host, and capture
