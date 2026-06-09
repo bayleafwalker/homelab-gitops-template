@@ -38,4 +38,5 @@ better source of truth.
 - `networkpolicies.md` — cluster NetworkPolicy patterns.
 - `registry.md` — registry/mirror notes.
 - `storage-troubleshooting.md` — comprehensive storage troubleshooting guide (Longhorn, VolSync, PVC provisioning).
+- `cluster-troubleshooting.md` — cross-cutting troubleshooting (NFS export/ACL drift, Cilium `world`/NodePort denial, Gateway 502 vs backend).
 - `truenas-storage.md` / `truenas-setup-checklist.md` / `truenas-auth.md` — storage platform notes.

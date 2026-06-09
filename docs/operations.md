@@ -71,9 +71,55 @@ kubectl get nodes -o wide
 kubectl top nodes || true
 ```
 
+> ⚠️ The phase filter above **misses** `OOMKilled` / `CrashLoopBackOff` containers in
+> pods whose phase is still `Running`. Always cross-check with a readiness-aware query,
+> or a health check can report "all clean" while a worker (e.g. an Authentik worker or
+> `system-upgrade-controller`) is silently crash-looping:
+
+```bash
+# Readiness-aware: catches non-Running phases AND Running pods with unready containers
+kubectl get pods -A -o json | jq -r '
+  .items[]
+  | select(
+      (.status.phase != "Running" and .status.phase != "Succeeded")
+      or (([.status.containerStatuses[]?.ready] | any(. == false)) and .status.phase != "Succeeded")
+    )
+  | [.metadata.namespace, .metadata.name, .status.phase] | @tsv'
+
+# Confirm a suspected OOM from pod state (not just app logs)
+kubectl -n <namespace> describe pod <pod> | grep -A2 "Last State"   # OOMKilled, exit 137
+kubectl -n <namespace> logs <pod> --previous
+```
+
 Notes:
 - `Completed` pods are typically CronJobs/Helm hooks and are usually OK.
 - Some services may be intentionally disabled/suspended; treat those as expected if documented.
+- A pod can stay `phase: Running` while a container is repeatedly `OOMKilled`. A recent
+  OOM fix can also **regress** — if a memory bump doesn't hold, the ceiling is likely
+  still too low; raise request/limit again rather than assuming the prior fix is intact.
+
+## GitOps desired-state drift vs runtime health
+
+A `HelmRelease`/`Kustomization` can report `Ready=False` while the workload is perfectly
+healthy — and vice versa. The common case: a chart/image version was rolled back **live**
+(or on the local branch) to recover from a bad upgrade, but `origin/main` still desires the
+broken version, so Flux keeps re-applying it and reports the release as failed.
+
+Distinguish the two before acting:
+```bash
+# Is the workload actually serving, or is this only a desired-state failure?
+kubectl -n <namespace> get pods,hr
+flux get hr -A --status-selector ready=false
+
+# Compare what Git desires vs what is live
+git status
+git show origin/main:clusters/main/kubernetes/<path>/helm-release.yaml | grep -A2 -i version
+```
+
+- If the workload is healthy on a rolled-back revision, the fix is to **commit and push
+  the rollback** so Git matches reality — do not touch the running cluster.
+- If the workload is genuinely down, treat it as an outage: remediate the runtime first,
+  then reconcile Git.
 
 ## Alert hygiene and signal policy
 

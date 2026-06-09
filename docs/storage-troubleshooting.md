@@ -95,6 +95,71 @@ kubectl get events -n longhorn-system | grep -i <volume-name>
    kubectl edit volume.longhorn.io -n longhorn-system <volume-name>
    ```
 
+### Stale VolumeAttachment After Node Failure (dead-node rollout deadlock)
+
+When a worker node goes `NotReady` while running a Longhorn-backed workload (especially
+a single-replica app with a `Recreate` strategy), a user-facing outage — often a Gateway
+**502** — can persist long after the node itself recovers, because of a three-part
+deadlock:
+
+1. The old pod is stuck **Terminating** on the dead node.
+2. The replacement pod can't schedule — it may have inherited a chart-generated
+   **required podAffinity** pinning it to the dead node.
+3. Stale CSI **`VolumeAttachment`** objects still pin the PVCs to the dead node, so even
+   once scheduling is unblocked the new pod hits `Multi-Attach` errors.
+
+**Symptoms:**
+- Gateway/proxy is healthy (returns 502) while the backend has no serving endpoint
+- `kubectl describe pod` shows `FailedScheduling` (affinity) and/or `Multi-Attach error`
+- Old pod stuck `Terminating`; the node is `NotReady`
+
+**Investigation:**
+
+```bash
+kubectl -n <namespace> get pods -o wide
+kubectl -n <namespace> describe pod <replacement-pod>     # FailedScheduling / Multi-Attach
+kubectl get volumeattachment.storage.k8s.io -o wide | grep <dead-node>
+kubectl get volumes.longhorn.io -n longhorn-system | grep <pvc-id>
+```
+
+**Remediation — order matters:**
+
+```bash
+# 1. Force-delete the stale terminating pod on the dead node
+kubectl -n <namespace> delete pod <stuck-pod> --force --grace-period=0
+
+# 2. Remove the live blocking affinity so the replacement can schedule on a healthy node
+kubectl -n <namespace> patch deployment <deploy> --type=json \
+  -p='[{"op":"remove","path":"/spec/template/spec/affinity"}]'
+
+# 3. Delete the stale CSI VolumeAttachment objects pinning the PVCs to the dead node
+kubectl delete volumeattachment.storage.k8s.io <attachment-1> <attachment-2>
+
+# 4. Recreate the replacement pod so it re-attaches on the healthy node
+kubectl -n <namespace> delete pod <first-replacement-pod>
+```
+
+**Persist the fix in Git** so the next Helm rollout doesn't re-inherit the affinity:
+
+```yaml
+# In the workload's HelmRelease values — TrueCharts schema (e.g. nextcloud),
+# which is what generates the required podAffinity in the first place:
+workload:
+  main:
+    podSpec:
+      affinity: {}
+# For a bjw-s app-template chart the equivalent key is:
+# controllers.<name>.pod.affinity: {}
+```
+
+**Notes:**
+- Do the steps **in order** — deleting `VolumeAttachment` objects before clearing the
+  stuck pod can race with Longhorn re-creating them.
+- Only force-delete pods and delete `VolumeAttachment` objects for the **confirmed dead**
+  node. Doing this for a live node can corrupt an in-use RWO volume.
+- Investigate the node failure separately (`kubectl describe node`, `talosctl health`)
+  so the workload isn't pinned again on the next outage.
+
 ## VolSync Backup Issues
 
 ### Mount Timeout Errors
@@ -198,6 +263,95 @@ kubectl describe replicationsource -n <namespace> <name>
    # Backup existing data first, then:
    kubectl exec -n <namespace> $RUNNING_POD -- restic -r /restic/repo init
    ```
+
+### Stale Restic-Lock Cascade (backup saved, `forget`/retention blocked)
+
+This is the single most common VolSync failure in a long-running cluster. A mover saves
+its snapshot successfully but then fails the `forget`/prune step because a **stale restic
+lock** was left behind by a previous mover pod that was killed or evicted mid-run. The
+`ReplicationSource` status goes stale (`lastSyncTime` stops advancing) even though data
+is still being captured, and locks accumulate across runs until every subsequent
+`forget` fails — often across several namespaces at once.
+
+**Symptoms:**
+- `ReplicationSource` `lastSyncTime` is hours/days old while the workload is healthy
+- Mover logs show `repository is already locked ... lock was created at ... (stale)`
+- A snapshot **is** saved each run, but the job ends in failure on the prune/`forget` step
+- Multiple namespaces affected at once — a cascade
+
+**Investigation:**
+
+```bash
+# Which sources are stale? Compare lastSyncTime to the configured schedule.
+kubectl get replicationsource -A
+kubectl -n <namespace> describe replicationsource <name>
+
+# Look for the lock message in the most recent mover
+kubectl -n <namespace> logs job/volsync-src-<name> --tail=200 | grep -i lock
+
+# List locks from inside a *running* mover pod
+RUNNING_POD=$(kubectl get pods -n <namespace> -l app.kubernetes.io/created-by=volsync \
+  --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')
+kubectl -n <namespace> exec "$RUNNING_POD" -- restic list locks --no-cache
+```
+
+**Remediation (least to most invasive):**
+
+1. **Trigger an unlock via the VolSync annotation** (preferred — lets the operator handle it):
+   ```bash
+   kubectl annotate replicationsource -n <namespace> <name> \
+     volsync.backube/unlock=$(date +%s) --overwrite
+   ```
+
+2. **Unlock from inside the active mover** if a run is in progress and the annotation
+   alone does not clear it:
+   ```bash
+   kubectl -n <namespace> exec <running-volsync-pod> -- restic unlock
+   ```
+
+3. **Recycle the stale mover job** so a fresh one starts cleanly:
+   ```bash
+   kubectl -n <namespace> delete job volsync-src-<name> --ignore-not-found
+   ```
+
+4. **Force-clear a stuck lock pair without cache access** (last resort — when a stale
+   lock and the current lock are both present and `restic unlock` alone won't remove them):
+   ```bash
+   kubectl -n <namespace> exec <running-volsync-pod> -- restic unlock --no-cache --remove-all
+   kubectl -n <namespace> exec <running-volsync-pod> -- restic list locks --no-cache
+   ```
+   Afterwards the only lock listed should be the active non-exclusive lock owned by the
+   current mover.
+
+**Verify recovery:**
+
+```bash
+kubectl -n <namespace> describe replicationsource <name>   # lastSyncTime advances
+kubectl get replicationsource -A                            # all sources fresh
+```
+
+**Notes / prevention:**
+- A failing `forget` is **not** data loss — the snapshot was saved. Alert on stale
+  `Last Sync Time`, not only on pod phase, so these are caught before locks cascade.
+- `--remove-all` removes *all* locks in the repository. Only run it once you have
+  confirmed no other healthy mover is mid-run against the same repo.
+- A restic **cache** owned by `root:root` produces repeated cache warnings and can
+  contribute to lock churn. If that warning becomes a blocker, delete the ephemeral
+  cache PVC (`volsync-src-<name>-cache`) and let VolSync recreate it writable.
+
+### Restore-Drill `lchown ... operation not permitted`
+
+VolSync restore drills (a `ReplicationDestination` validating a repo) can fail during the
+restic restore with `lchown <path>: operation not permitted`. The backup itself is fine —
+only the restore *validation* fails, because the restore replays ownership/permissions the
+mover cannot set (common on NFS-backed or root-squashed paths, or when restoring
+workspace/home trees).
+
+**Handling:**
+- Run restore drills against **disposable Longhorn PVCs**, not NFS-backed targets.
+- Exclude generated caches / large state that don't need ownership replay.
+- If a restore drill holds a repository lock and blocks the real backup's `forget`, stop
+  the drill job first, then clear locks using the cascade procedure above.
 
 ## PVC Provisioning Issues
 
@@ -450,3 +604,6 @@ kubectl describe node <node-name> | grep -A 20 "Allocated resources"
 - Added VolSync mount timeout troubleshooting
 - Added PVC provisioning patterns
 - Added performance troubleshooting section
+- **2026-06-09**: Added VolSync stale restic-lock cascade + restore-drill ownership
+  patterns; added stale `VolumeAttachment` / dead-node rollout deadlock recovery
+  (distilled from recurring cluster health-check findings).
