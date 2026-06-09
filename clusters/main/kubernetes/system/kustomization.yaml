@@ -2,33 +2,36 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - cert-manager/ks.yaml
-  - kyverno/ks.yaml
-  - kyverno/policies-ks.yaml
-  - kured/ks.yaml
-  - forgejo-runner/ks.yaml
-  - github-actions-runner/ks.yaml
   - gateway-api-crds/ks.yaml
-  - registry/ks.yaml
-  - cloudnative-pg/ks.yaml
-  - kubernetes-reflector/ks.yaml
-  - longhorn/ks.yaml
-  - longhorn-config/ks.yaml
   - metallb/ks.yaml
-  - openebs/ks.yaml
-  - snapshot-controller/ks.yaml
-  - spegel/ks.yaml
-  - system-upgrade-controller/ks.yaml
-  - truenas-rwx/ks.yaml
-  - volsync/ks.yaml
-  - kube-prometheus-stack/ks.yaml
-  - backup-observability/ks.yaml
-  - blackbox-exporter/ks.yaml
-  - couchdb/ks.yaml
-  - prometheus-operator/ks.yaml
-  - loki/ks.yaml
-  - alloy/ks.yaml
-  - promtail/ks.yaml
-  - etcd-backup/ks.yaml
-  - vpa/ks.yaml
-  - goldilocks/ks.yaml
-  - networkpolicies/ks.yaml
+
+# Optional system services. Enable only after reading docs/service-catalog.md
+# and replacing required environment-specific values.
+#  - cloudnative-pg/ks.yaml           # CNPG operator for PostgreSQL-backed apps.
+#  - longhorn/ks.yaml                 # Stateful block storage.
+#  - longhorn-config/ks.yaml          # Example Longhorn node/disk config.
+#  - openebs/ks.yaml                  # Local storage classes.
+#  - snapshot-controller/ks.yaml      # VolumeSnapshot support.
+#  - volsync/ks.yaml                  # Restic-based PVC replication.
+#  - truenas-rwx/ks.yaml              # Static NFS/RWX examples.
+#  - registry/ks.yaml                 # Private registry mirror example.
+#  - github-actions-runner/ks.yaml    # GitHub ARC; needs GitHub App secret.
+#  - forgejo-runner/ks.yaml           # Forgejo runner; needs runner token.
+#  - kubernetes-reflector/ks.yaml     # Secret reflection for TLS and ARC examples.
+#  - system-upgrade-controller/ks.yaml # Talos/Kubernetes upgrade orchestration.
+#  - kyverno/ks.yaml                  # Policy engine.
+#  - kyverno/policies-ks.yaml         # Example policies; depends on Kyverno.
+#  - kured/ks.yaml                    # Node reboot daemon.
+#  - spegel/ks.yaml                   # Image cache.
+#  - kube-prometheus-stack/ks.yaml    # Monitoring stack; heavy by default.
+#  - prometheus-operator/ks.yaml      # Prometheus CRDs/operator example.
+#  - backup-observability/ks.yaml     # Backup freshness exporter.
+#  - blackbox-exporter/ks.yaml        # Edge/public-path probes.
+#  - loki/ks.yaml                     # Logs backend.
+#  - promtail/ks.yaml                 # Node log shipper.
+#  - alloy/ks.yaml                    # Logging/metrics canary.
+#  - etcd-backup/ks.yaml              # Talos etcd snapshots to S3.
+#  - vpa/ks.yaml                      # Vertical Pod Autoscaler.
+#  - goldilocks/ks.yaml               # VPA recommendations UI.
+#  - couchdb/ks.yaml                  # Obsidian LiveSync backend.
+#  - networkpolicies/ks.yaml          # Example Cilium/NetworkPolicy hardening.

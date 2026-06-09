@@ -1,7 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - blocky/ks.yaml
-  - clusterissuer/ks.yaml
   - metallb-config/ks.yaml
-  - system-upgrade-controller-plans/ks.yaml
+
+# Optional core services.
+#  - clusterissuer/ks.yaml            # ACME issuer; needs DNS provider token.
+#  - blocky/ks.yaml                   # DNS sinkhole/k8s_gateway example.
+#  - system-upgrade-controller-plans/ks.yaml # Needs System Upgrade Controller.

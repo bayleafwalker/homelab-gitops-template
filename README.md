@@ -1,7 +1,7 @@
 
 # homelab-gitops-template
 
-A full-reference GitOps template for a Talos-based Kubernetes homelab managed by Flux, SOPS/age, and either the TrueCharts/TrueForge ForgeTool/ClusterTool workflow or a direct Talos/Flux workflow. It is meant to be copied, renamed, and trimmed to your hardware and services. Flux continuously reconciles the desired state under `clusters/main`, while secrets stay encrypted with SOPS/age.
+A lean GitOps starter and reference template for a Talos-based Kubernetes homelab managed by Flux, SOPS/age, and either the TrueCharts/TrueForge ForgeTool/ClusterTool workflow or a direct Talos/Flux workflow. It is meant to be copied, renamed, and extended to your hardware and services. Flux continuously reconciles the desired state under `clusters/main`, while secrets stay encrypted with SOPS/age.
 
 This is an independent template. It is not an official TrueCharts or TrueForge
 distribution, although many included examples depend on TrueCharts charts and
@@ -9,9 +9,9 @@ ClusterTool-compatible configuration files.
 
 ## Positioning
 
-Use this template when you want a worked example of a complete Talos + Flux homelab:
-cluster configuration, encrypted substitutions, Gateway API routing, storage,
-backup patterns, monitoring, and several app deployments in one tree.
+Use this template when you want a lean Talos + Flux starter with worked opt-in
+examples for cluster configuration, encrypted substitutions, Gateway API
+routing, storage, backup patterns, monitoring, and app deployments.
 
 Prefer upstream guidance or another starting point when that is the real goal:
 
@@ -33,9 +33,15 @@ Detailed positioning and upstream links are in
 - GitOps: Flux controllers come from the OCI manifest repo `ghcr.io/fluxcd/flux-manifests` (`clusters/main/kubernetes/repositories/oci/flux-manifests.yaml`, tag v2.8.8). `clusters/main/kubernetes/flux-system/flux` holds bootstrap assets; `flux-entry.yaml` reconciles `clusters/main/kubernetes` with SOPS decryption and substitution from `cluster-config` and `upgrade-settings`.
 - Sources: Helm, Git and OCI repositories live under `clusters/main/kubernetes/repositories/`; TrueCharts is the primary catalog (`clusters/main/kubernetes/repositories/helm/truecharts.yaml`, `clusters/main/kubernetes/repositories/git/truecharts.yaml`) alongside mirrors for networking, storage and monitoring charts.
 - Networking/routing: Cilium CNI (kube-proxy replacement), MetalLB + `core/metallb-config` for L2 pools, Cilium Gateway API HTTP routing, plus supporting services like Blocky, Tailscale, Mosquitto, and Omada.
-- Storage & data safety: Longhorn and OpenEBS CSI, snapshot-controller, Volsync, and System Upgrade Controller plans in `core/system-upgrade-controller-plans`.
-- Observability/ops: kube-prometheus-stack, Prometheus Operator, metrics-server, node-feature-discovery, descheduler and Spegel image cache.
-- Service health model: `gatus` is used for in-cluster service checks (`*.svc.cluster.local`) with explicit cross-namespace policy allows; edge/public-path probes remain in blackbox-exporter.
+- Storage & data safety examples: Longhorn, OpenEBS CSI, snapshot-controller,
+  VolSync, TrueNAS RWX, and System Upgrade Controller plans are included as
+  opt-in examples.
+- Observability/ops examples: kube-prometheus-stack, Prometheus Operator,
+  node-feature-discovery, descheduler, Spegel, Loki/Promtail, Gatus, and
+  blackbox-exporter are included as opt-in examples.
+- Service health model: optional `gatus` checks in-cluster service paths
+  (`*.svc.cluster.local`) with explicit cross-namespace policy allows;
+  edge/public-path probes remain in optional blackbox-exporter.
 
 ## Repository layout
 
@@ -59,6 +65,10 @@ Detailed positioning and upstream links are in
 Start with **[`docs/onboarding.md`](docs/onboarding.md)**. It lists the decisions
 you must make before bootstrap: node inventory, LAN/VIP/LB ranges, domain/DNS,
 S3 object storage, NFS shares, and which bundled services to keep.
+
+The default reconciliation set is intentionally small. Richer examples remain
+in the tree but are commented out in category `kustomization.yaml` files; use
+[`docs/service-catalog.md`](docs/service-catalog.md) to enable them deliberately.
 
 Then use this short loop:
 
@@ -107,6 +117,7 @@ Useful local helpers:
 - `docs/onboarding.md` — **start here if you're new**: the values, dependencies, and services to decide before bootstrap.
 - `docs/bootstrapping.md` — step-by-step guide to standing up a 1-2 node cluster from this template.
 - `docs/architecture.md` — core architecture and components.
+- `docs/service-catalog.md` — opt-in service pathways and dependency notes.
 - `docs/template-publishing.md` — template positioning, TrueCharts dependency posture, upstream references, and publishing guidance.
 - `docs/operations.md` — bootstrap and day-2 workflows.
 - `docs/releases.md` — version pinning and upgrade guidance.

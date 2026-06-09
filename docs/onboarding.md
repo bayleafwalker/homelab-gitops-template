@@ -149,8 +149,10 @@ services are enabled.
 
 ## 5. Service ramp-up
 
-Do not enable everything blindly on tiny hardware. Start with the platform
-layers, then add user workloads.
+The default reconciliation set is intentionally lean. Most services remain in
+the tree as opt-in examples, commented in their category `kustomization.yaml`
+files. Use `docs/service-catalog.md` before enabling a service so dependencies,
+secrets, storage, and routes are handled deliberately.
 
 Suggested order:
 
@@ -161,8 +163,8 @@ Suggested order:
 5. `apps`: Headlamp/Homepage first, then stateful apps like Nextcloud,
    Vaultwarden, Paperless, Forgejo, and custom apps.
 
-For a service you do not want yet, remove or comment its `ks.yaml` from the
-category `kustomization.yaml`. Re-run:
+To enable a service, uncomment its `ks.yaml` in the category
+`kustomization.yaml`, satisfy the catalog dependencies, and re-run:
 
 ```bash
 ./scripts/check-repo.sh

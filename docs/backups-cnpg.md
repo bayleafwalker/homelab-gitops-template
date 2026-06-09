@@ -4,18 +4,10 @@ CNPG-backed databases should be backed up using CNPG-native backups (Barman obje
 
 ## Configured clusters
 
+The template includes CNPG backup examples for:
+
 - `authentik/authentik-cnpg-main`
 - `vaultwarden/vaultwarden-cnpg-main`
-- `vscode/actionq-cnpg-main` — agent-ops action queue and coordinator event log
-- `vscode/sprintctl-cnpg-main` — agent-ops sprint/work-item state for all remote-mode repos
-
-### Agent-ops databases
-
-`actionq-cnpg-main` holds all actionq actions, lifecycle events, and coordinator emissions (session.*, coordinator_cycle). It is the source of truth for queue state and session history. Loss of this cluster without a backup means losing all dispatch history and in-flight action state.
-
-`sprintctl-cnpg-main` holds sprint state for every repo operating in remote mode, keyed by `repo_id`. Loss without a backup means losing sprint, work-item, and takeup event history for all remote-mode repos. Per-repo local SQLite databases (on the workspace PVC) are a secondary source for local-mode repos only.
-
-Both databases are backed up with 30-day retention and monthly restore drills. See the restore drill CronJobs in `clusters/main/kubernetes/apps/actionq-db/app/cnpg-restore-drill.yaml` and `clusters/main/kubernetes/apps/sprintctl-postgres/app/cnpg-restore-drill.yaml`.
 
 Restore-drill CronJobs are monitored by `system/backup-observability`. A drill that has never succeeded or has not succeeded in more than 45 days raises a Prometheus alert.
 
@@ -30,22 +22,16 @@ TrueCharts apps configure this through common `cnpg.main.backups` values:
 - `clusters/main/kubernetes/apps/authentik/app/helm-release.yaml`
 - `clusters/main/kubernetes/apps/vaultwarden/app/helm-release.yaml`
 
-Hand-written CNPG clusters configure `spec.backup.barmanObjectStore` and `ScheduledBackup` resources directly:
-- `clusters/main/kubernetes/apps/actionq-db/app/actionq-cnpg.yaml`
-- `clusters/main/kubernetes/apps/actionq-db/app/scheduled-backup.yaml`
-- `clusters/main/kubernetes/apps/sprintctl-postgres/app/sprintctl-cnpg.yaml`
-- `clusters/main/kubernetes/apps/sprintctl-postgres/app/scheduled-backup.yaml`
+The `apps/custom-app-postgres` directory shows a hand-written CNPG cluster
+pattern with `spec.backup.barmanObjectStore` and a `ScheduledBackup` resource.
 
 ## Health checks
 
 ```bash
 kubectl -n authentik get scheduledbackups.postgresql.cnpg.io,backups.postgresql.cnpg.io,clusters.postgresql.cnpg.io
 kubectl -n vaultwarden get scheduledbackups.postgresql.cnpg.io,backups.postgresql.cnpg.io,clusters.postgresql.cnpg.io
-kubectl -n vscode get scheduledbackups.postgresql.cnpg.io,backups.postgresql.cnpg.io,clusters.postgresql.cnpg.io
 kubectl -n authentik describe scheduledbackups.postgresql.cnpg.io authentik-cnpg-main-sched-backup-daily
 kubectl -n vaultwarden describe scheduledbackups.postgresql.cnpg.io vaultwarden-cnpg-main-sched-backup-daily
-kubectl -n vscode describe scheduledbackups.postgresql.cnpg.io actionq-cnpg-main-daily
-kubectl -n vscode describe scheduledbackups.postgresql.cnpg.io sprintctl-cnpg-main-daily
 ```
 
 Note: `kubectl get backup …` is ambiguous in this cluster (Longhorn also has a `Backup` CRD). Always use `backups.postgresql.cnpg.io` for CNPG backups.
@@ -62,8 +48,6 @@ This repo includes a monthly restore drill CronJob per CNPG-backed app:
 
 - `clusters/main/kubernetes/apps/authentik/app/cnpg-restore-drill.yaml`
 - `clusters/main/kubernetes/apps/vaultwarden/app/cnpg-restore-drill.yaml`
-- `clusters/main/kubernetes/apps/actionq-db/app/cnpg-restore-drill.yaml`
-- `clusters/main/kubernetes/apps/sprintctl-postgres/app/cnpg-restore-drill.yaml`
 
 Each job:
 1) Selects the newest `completed` CNPG `Backup` for the target cluster.
@@ -76,12 +60,8 @@ Manual run:
 ```bash
 kubectl -n authentik create job --from=cronjob/cnpg-restore-drill cnpg-restore-drill-manual
 kubectl -n vaultwarden create job --from=cronjob/cnpg-restore-drill cnpg-restore-drill-manual
-kubectl -n vscode create job --from=cronjob/actionq-cnpg-restore-drill actionq-cnpg-restore-drill-manual
-kubectl -n vscode create job --from=cronjob/sprintctl-cnpg-restore-drill sprintctl-cnpg-restore-drill-manual
 kubectl -n authentik logs -l job-name=cnpg-restore-drill-manual --all-containers --tail=200
 kubectl -n vaultwarden logs -l job-name=cnpg-restore-drill-manual --all-containers --tail=200
-kubectl -n vscode logs -l job-name=actionq-cnpg-restore-drill-manual --all-containers --tail=200
-kubectl -n vscode logs -l job-name=sprintctl-cnpg-restore-drill-manual --all-containers --tail=200
 ```
 
 ## Restore runbook (manual)

@@ -11,6 +11,7 @@ better source of truth.
 - `prompt-guide.md` — AI agent entrypoint (scope, guardrails, and validation).
 - `architecture.md` — high-level architecture and component map.
 - `service-deployment-guide.md` — service layout/patterns and day-2 workflows.
+- `service-catalog.md` — opt-in service pathways and dependency checklist.
 - `template-publishing.md` — template positioning, TrueCharts dependency posture, upstream references, and publishing guidance.
 - `operations.md` — bootstrap and operational runbooks (Flux, DNS/Gateway API, monitoring, backups).
 - `secrets.md` — SOPS/age rules and safe secret-handling patterns.

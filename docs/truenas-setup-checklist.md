@@ -27,6 +27,9 @@ any services that reference `truenas-weave-pvc`.
 Complete these steps on your own TrueNAS system before enabling the bundled
 manifests:
 
+The commands use `storage_layer/weave` and `/mnt/storage_layer/weave` as sample
+dataset/export names. Replace them with your own pool and dataset names.
+
 ### 1. Create Dataset Structure
 ```bash
 # Via TrueNAS Shell

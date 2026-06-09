@@ -12,7 +12,7 @@ Usage: ./scripts/sops-files.sh <command> [file...]
 
 Commands:
   list       Print files that should be encrypted before real values are committed.
-  check      Fail if any target file is not SOPS-encrypted.
+  check      Fail if any target file is plaintext without placeholder markers.
   encrypt    Encrypt target files in place with sops -e -i.
   decrypt    Decrypt target files to .decrypted~<name> beside each source file.
 
@@ -51,20 +51,30 @@ case "${command}" in
     ;;
   check)
     missing=0
+    placeholders=0
     for file in "${files[@]}"; do
       if [[ ! -f "${file}" ]]; then
         echo "missing: ${file}" >&2
         missing=$((missing + 1))
       elif ! rg -q '^sops:|ENC\[' "${file}"; then
-        echo "not encrypted: ${file}" >&2
-        missing=$((missing + 1))
+        if rg -q 'REPLACE_WITH|example\.com|your-|00:11:22:33|Sample only|placeholder|sample|\$\{[A-Z0-9_]+\}' "${file}"; then
+          echo "placeholder template not encrypted: ${file}" >&2
+          placeholders=$((placeholders + 1))
+        else
+          echo "not encrypted: ${file}" >&2
+          missing=$((missing + 1))
+        fi
       fi
     done
     if [[ "${missing}" -gt 0 ]]; then
       echo "${missing} file(s) need attention" >&2
       exit 1
     fi
-    echo "All target files look SOPS-encrypted"
+    if [[ "${placeholders}" -gt 0 ]]; then
+      echo "${placeholders} placeholder template file(s) are plaintext; encrypt after inserting real values"
+    else
+      echo "All target files look SOPS-encrypted"
+    fi
     ;;
   encrypt)
     if ! command -v sops >/dev/null 2>&1; then

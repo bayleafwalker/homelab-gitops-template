@@ -4,11 +4,14 @@ resources:
   - namespace.yaml
   - coredns/ks.yaml
   - cilium/ks.yaml
-  - descheduler/ks.yaml
-  - generic-device-plugin/ks.yaml
-  - gpu-operator/ks.yaml
   - kubelet-csr-approver/ks.yaml
   - metrics-server/ks.yaml
-  - node-feature-discovery/ks.yaml
-  - nvidia-device-plugin/ks.yaml
-  - nvidia-runtimeclass.yaml
+
+# Optional kube-system services. Enable hardware-specific services only on
+# matching nodes and after reading docs/gpu-setup.md.
+#  - descheduler/ks.yaml              # Scheduling hygiene; not required to bootstrap.
+#  - node-feature-discovery/ks.yaml   # Hardware labels; useful for GPU/Coral.
+#  - generic-device-plugin/ks.yaml    # Coral/other generic device examples.
+#  - gpu-operator/ks.yaml             # NVIDIA operator example.
+#  - nvidia-device-plugin/ks.yaml     # Lightweight NVIDIA device plugin.
+#  - nvidia-runtimeclass.yaml         # RuntimeClass for NVIDIA workloads.

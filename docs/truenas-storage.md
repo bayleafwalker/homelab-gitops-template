@@ -23,6 +23,10 @@ The cluster uses TrueNAS to provide:
 
 ### Required NFS Export Settings
 
+The commands below use `/mnt/storage_layer/weave` as an example dataset path.
+Replace it with your own pool/dataset before applying anything to a real
+TrueNAS host.
+
 Export `/mnt/storage_layer/weave` from TrueNAS with the following configuration:
 
 **Path:** `/mnt/storage_layer/weave`

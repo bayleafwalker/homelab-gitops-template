@@ -14,10 +14,10 @@
 # 1. Cluster identity and required Talos/clustertool compatibility values
 ###############################################################################
 
-# CLUSTERNAME is used by talconfig.yaml and backup paths. Rename from `main`
+# CLUSTERNAME is used by talconfig.yaml and backup paths. Rename from `homelab`
 # if you want generated configs, backup folders, and local prompts to carry
 # your cluster name.
-CLUSTERNAME: main
+CLUSTERNAME: homelab
 
 # Label used to opt nodes into System Upgrade Controller plans. The same value
 # is rendered into Talos node labels and Flux Plan nodeSelectors.

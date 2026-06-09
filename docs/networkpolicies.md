@@ -82,9 +82,9 @@ The bundled `gatus` policy set is designed for a Track A steady state:
   - `gatus-allow-dns.yaml`
   - `gatus-allow-ingress-cilium-gateway.cnp.yaml`
   - `gatus-internal-allow-egress-core-services.cnp.yaml`
-- Ongoing validation and diagnostics should use the consolidated maintenance script:
-  - `bash docs/scripts/gatus-maintenance.sh validate-internal-all`
-  - `bash docs/scripts/gatus-maintenance.sh diagnose-hairpin`
+- Ongoing validation and diagnostics should follow
+  `docs/gatus-monitoring-maintenance.md`. This template does not currently
+  bundle a maintenance script.
 
 Use live commands rather than static lists for current coverage:
 - `direnv exec . kubectl get networkpolicy -A`

@@ -79,8 +79,6 @@ spec:
           dnsserver: ${LDAP_OUTPOST_IP}
         - domain: "forgejo-ssh.${DOMAIN_0}"
           dnsserver: ${FORGEJO_SSH_IP}
-        - domain: "sprintctl-pg.${DOMAIN_0}"
-          dnsserver: ${POSTGRES_LB_IP}
         - domain: "shell.${DOMAIN_HOST}"
           dnsserver: ${SHELL_IP}
         - domain: "shell.${DOMAIN_0}"

@@ -26,10 +26,11 @@ This template is not:
 
 ## Existing Options
 
-This repository is most useful as a **worked integration example**. It shows how
-Talos node configuration, Flux reconciliation, SOPS substitutions, Gateway API
-routing, storage, backup jobs, monitoring, and app manifests fit together in one
-homelab GitOps tree.
+This repository is most useful as a **lean starter with worked opt-in examples**.
+The default reconciliation set stays small enough to bootstrap, while the
+commented service examples show how Talos node configuration, Flux
+reconciliation, SOPS substitutions, Gateway API routing, storage, backup jobs,
+monitoring, and app manifests fit together in one homelab GitOps tree.
 
 Use the upstream source of truth when you need authoritative project behavior,
 tool commands, chart values, support policy, or upgrade notes:
@@ -151,8 +152,10 @@ Before publishing a derived copy or marking it as a GitHub template:
   remain.
 - Search for private domains, IP ranges, hostnames, tokens, emails, bucket
   names, VPN CIDRs, deploy keys, and storage paths.
-- Confirm `.envrc`, `age.agekey`, generated Talos `clusterconfig/`, deploy
-  keys, kubeconfigs, and talosconfigs are gitignored.
+- Confirm `.envrc`, `age.agekey`, generated Talos outputs
+  (`clusterconfig/`, `clusters/main/talos/generated/`, `talconfig.json`,
+  `talsecret.yaml`), deploy keys, kubeconfigs, and talosconfigs are gitignored.
 - Keep examples small enough for a newcomer to trim. Large reference topologies
-  should be labeled as examples, not defaults.
+  should be labeled as examples, not defaults. Use `docs/service-catalog.md` to
+  document opt-in pathways for richer services.
 - Keep upstream references as links, not copied guide text.

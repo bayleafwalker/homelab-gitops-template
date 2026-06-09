@@ -146,5 +146,4 @@ To manually force a restore test, you can temporarily add a `manual` trigger (or
 
 Notes:
 - Databases should generally be backed up using DB-native tooling (e.g., CNPG backups) rather than raw PVC snapshots.
-- The agent-ops CNPG clusters (actionq, sprintctl) are covered by CNPG Barman backups — do not add VolSync for their Longhorn PVCs.
 - `truenas-workspace-pvc` (namespace `vscode`) is covered by the restic CronJob described above, not a VolSync ReplicationSource. TrueNAS ZFS snapshots provide an additional layer of protection at the storage layer.

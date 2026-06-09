@@ -6,6 +6,10 @@ This cluster uses a GitOps approach with Flux CD to manage all service deploymen
 
 Operational note: use `direnv exec . <cmd>` for `kubectl`/`flux` commands so you don’t accidentally target a global kubeconfig.
 
+Publishing note: the root tree is a lean starter. New non-foundation services
+should be documented in `docs/service-catalog.md` and left commented in the
+category `kustomization.yaml` unless they are required for first bootstrap.
+
 ## Deployment Architecture
 
 ### Directory Structure

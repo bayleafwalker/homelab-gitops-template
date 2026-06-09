@@ -1,18 +1,21 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-resources:
-  - headlamp/ks.yaml
-  - authentik/ks.yaml
-  - authentik-ldap-outpost/ks.yaml
-  - vscode/ks.yaml
-  - custom-app/ks.yaml
-  - custom-app-postgres/ks.yaml
-  - vaultwarden/ks.yaml
-  - obsidian/ks.yaml
-  - homepage/ks.yaml
-  - gatus/ks.yaml
-  - forgejo/ks.yaml
-  - paperless/ks.yaml
-  - nextcloud/ks.yaml
-  - collabora/ks.yaml
-  - silverbullet/ks.yaml
+resources: []
+
+# Optional app examples. Enable only after replacing required variables/secrets
+# and reviewing docs/service-catalog.md for dependencies.
+#  - headlamp/ks.yaml                 # Kubernetes dashboard; needs Gateway route.
+#  - homepage/ks.yaml                 # Internal homepage; useful first UI.
+#  - gatus/ks.yaml                    # Internal service checks; needs policy wiring.
+#  - authentik/ks.yaml                # Identity provider; stateful, CNPG/S3 recommended.
+#  - authentik-ldap-outpost/ks.yaml   # LDAP outpost; depends on Authentik token.
+#  - vaultwarden/ks.yaml              # Stateful password manager; needs S3/VolSync.
+#  - forgejo/ks.yaml                  # Git forge; stateful CNPG app and SSH/LB IP.
+#  - paperless/ks.yaml                # Stateful document app; needs storage and secrets.
+#  - nextcloud/ks.yaml                # Large stateful app; needs RWX storage and CNPG.
+#  - collabora/ks.yaml                # Office integration; normally paired with Nextcloud.
+#  - obsidian/ks.yaml                 # Notes app example; depends on CouchDB sync.
+#  - vscode/ks.yaml                   # Browser workspace; depends on RWX storage.
+#  - custom-app/ks.yaml               # Stateless app pattern.
+#  - custom-app-postgres/ks.yaml      # Hand-written CNPG app pattern.
+#  - silverbullet/ks.yaml             # Placeholder app example.
