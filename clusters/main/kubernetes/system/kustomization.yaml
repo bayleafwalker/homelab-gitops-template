@@ -23,8 +23,7 @@ resources:
 #  - kyverno/policies-ks.yaml         # Example policies; depends on Kyverno.
 #  - kured/ks.yaml                    # Node reboot daemon.
 #  - spegel/ks.yaml                   # Image cache.
-#  - kube-prometheus-stack/ks.yaml    # Monitoring stack; heavy by default.
-#  - prometheus-operator/ks.yaml      # Prometheus CRDs/operator example.
+#  - kube-prometheus-stack/ks.yaml    # Monitoring stack (bundles the Prometheus Operator + CRDs).
 #  - backup-observability/ks.yaml     # Backup freshness exporter.
 #  - blackbox-exporter/ks.yaml        # Edge/public-path probes.
 #  - loki/ks.yaml                     # Logs backend.

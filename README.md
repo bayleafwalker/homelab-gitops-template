@@ -1,6 +1,8 @@
 
 # homelab-gitops-template
 
+[![Validate](https://github.com/bayleafwalker/homelab-gitops-template/actions/workflows/validate.yaml/badge.svg)](https://github.com/bayleafwalker/homelab-gitops-template/actions/workflows/validate.yaml)
+
 A lean GitOps starter and reference template for a Talos-based Kubernetes homelab managed by Flux, SOPS/age, and either the TrueCharts/TrueForge ForgeTool/ClusterTool workflow or a direct Talos/Flux workflow. It is meant to be copied, renamed, and extended to your hardware and services. Flux continuously reconciles the desired state under `clusters/main`, while secrets stay encrypted with SOPS/age.
 
 This is an independent template. It is not an official TrueCharts or TrueForge
@@ -49,7 +51,6 @@ Detailed positioning and upstream links are in
 .
 ├── .sopsrc                    # Points to the local Age key used for SOPS encryption
 ├── docs/                      # Documentation index and guides
-├── repositories/              # Source definitions for Helm, Git and OCI feeds
 └── clusters/main
     ├── talos/                 # Talos cluster configuration and patches
     └── kubernetes/            # All Kubernetes manifests organised by function
@@ -57,7 +58,7 @@ Detailed positioning and upstream links are in
         ├── flux-entry.yaml    # Top-level Kustomization reconciling the cluster state
         ├── core/, system/     # Platform services (SUC, cert-manager, storage, monitoring, etc.)
         ├── network/, apps/    # Workloads and ingress/controllers
-        └── repositories/      # Secondary Git/Helm/OCI sources consumed by Flux
+        └── repositories/      # Git/Helm/OCI source definitions consumed by Flux
 ```
 
 ## First cluster path

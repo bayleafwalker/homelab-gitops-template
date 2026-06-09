@@ -164,7 +164,7 @@ check_doc_paths() {
     [[ "${ref}" == *'<'* || "${ref}" == *'>'* || "${ref}" == *'*'* ]] && continue
     [[ "${ref}" == http* || "${ref}" == *' '* ]] && continue
     [[ "${ref}" == ".envrc" || "${ref}" == ".envrc.example" ]] && continue
-    [[ "${ref}" == *'/foo/'* || "${ref}" == "docs/disabled-services-decision-log.md" ]] && continue
+    [[ "${ref}" == *'/foo/'* ]] && continue
     [[ "${ref}" == clusters/.kube/* || "${ref}" == clusters/.talos/* || "${ref}" == clusters/.ssh/* ]] && continue
     [[ "${ref}" == clusters/main/talos/generated/* || "${ref}" == "clusters/main/talos/generated/" ]] && continue
     case "${ref}" in

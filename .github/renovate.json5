@@ -1,0 +1,32 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
+    ':dependencyDashboard',
+    // TrueCharts maintain a shared Renovate preset for their charts/tooling.
+    // This template is TrueCharts-heavy, so it is a sensible default. Drop it
+    // if you migrate critical services off TrueCharts charts.
+    'github>truecharts/public//.github/renovate/main.json5',
+  ],
+  timezone: 'Etc/UTC',
+  prConcurrentLimit: 6,
+  prHourlyLimit: 2,
+  // Flux HelmRelease/OCIRepository/GitRepository versions are auto-detected by
+  // the built-in flux manager; chart versions stay pinned in each HelmRelease.
+  flux: {
+    managerFilePatterns: ['/clusters/.+\\.ya?ml$/'],
+  },
+  packageRules: [
+    {
+      description: 'Helm 4 is a breaking change — require manual approval for the major bump.',
+      matchDatasources: ['github-releases'],
+      matchPackageNames: ['helm/helm'],
+      allowedVersions: '/^v3\\./',
+    },
+    {
+      description: 'Label Talos/Kubernetes bumps so they are easy to gate behind a planned upgrade window.',
+      matchPackageNames: ['siderolabs/talos', 'kubernetes/kubernetes'],
+      addLabels: ['cluster-upgrade'],
+    },
+  ],
+}

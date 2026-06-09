@@ -1,0 +1,64 @@
+name: Validate
+
+# Self-contained template validation. Runs entirely on a GitHub-hosted runner
+# with no cluster access: it builds the Kustomize tree and runs the repo's own
+# consistency checks (scripts/check-repo.sh). This is the same validation the
+# onboarding docs ask contributors to run locally before committing.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep aligned with mise.toml.
+  KUSTOMIZE_VERSION: "5.7.1"
+
+jobs:
+  validate:
+    name: Kustomize build + repo checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Install kustomize ${{ env.KUSTOMIZE_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/kustomize.tar.gz \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/kustomize.tar.gz -C /usr/local/bin
+          kustomize version
+
+      - name: Build default reconciliation tree
+        run: kustomize build clusters/main/kubernetes >/dev/null
+
+      - name: Build every service kustomization (incl. opt-in examples)
+        run: |
+          set -euo pipefail
+          rc=0
+          while IFS= read -r kfile; do
+            dir="$(dirname "$kfile")"
+            # LoadRestrictionsNone mirrors how Flux's kustomize-controller resolves
+            # repo-relative ../ references (e.g. system/longhorn-config).
+            if ! kustomize build --load-restrictor=LoadRestrictionsNone "$dir" >/dev/null 2>/tmp/kb.err; then
+              echo "::error file=$kfile::kustomize build failed for $dir"
+              sed 's/^/    /' /tmp/kb.err
+              rc=1
+            fi
+          done < <(find clusters/main/kubernetes -name kustomization.yaml | sort)
+          exit "$rc"
+
+      - name: Repository consistency checks
+        run: ./scripts/check-repo.sh

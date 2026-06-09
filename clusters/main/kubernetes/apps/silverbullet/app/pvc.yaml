@@ -1,0 +1,17 @@
+# SilverBullet stores its "space" (all notes and attachments) on disk, so it
+# needs a persistent volume. This claim uses the cluster default StorageClass;
+# set `storageClassName` explicitly to target Longhorn, OpenEBS, or a TrueNAS
+# RWX class (see docs/service-catalog.md and docs/truenas-storage.md).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: silverbullet-space
+  namespace: silverbullet
+  labels:
+    app.kubernetes.io/name: silverbullet
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

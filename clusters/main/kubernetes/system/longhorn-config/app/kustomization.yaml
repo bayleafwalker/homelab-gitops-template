@@ -1,3 +1,10 @@
+# This kustomization re-applies two resources from the sibling longhorn/app/
+# directory (after Longhorn itself is Ready — see ks.yaml `dependsOn`). Flux's
+# kustomize-controller resolves these repo-relative paths from the Git artifact
+# root, so reconciliation works. A standalone `kustomize build` of THIS folder,
+# however, rejects the `../../` references for security reasons; build it with:
+#   kustomize build --load-restrictor=LoadRestrictionsNone \
+#     clusters/main/kubernetes/system/longhorn-config/app
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

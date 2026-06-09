@@ -1,0 +1,77 @@
+# Example self-hosted app deployed from a public image (no Helm chart) with a
+# persistent space, basic auth, Gateway API routing, and a default-deny-style
+# in-namespace NetworkPolicy. Use this as the pattern for small stateful apps.
+#
+# Pin to a specific released tag/digest for production use; `v2` tracks the
+# current major line.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: silverbullet
+  namespace: silverbullet
+  labels:
+    app.kubernetes.io/name: silverbullet
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: silverbullet
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: silverbullet
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: silverbullet
+          image: ghcr.io/silverbulletmd/silverbullet:v2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: SB_FOLDER
+              value: /space
+          envFrom:
+            - secretRef:
+                name: silverbullet-credentials
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: space
+              mountPath: /space
+      volumes:
+        - name: space
+          persistentVolumeClaim:
+            claimName: silverbullet-space

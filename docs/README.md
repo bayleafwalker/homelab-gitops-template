@@ -14,6 +14,7 @@ better source of truth.
 - `service-catalog.md` — opt-in service pathways and dependency checklist.
 - `template-publishing.md` — template positioning, TrueCharts dependency posture, upstream references, and publishing guidance.
 - `operations.md` — bootstrap and operational runbooks (Flux, DNS/Gateway API, monitoring, backups).
+- `disabled-services-decision-log.md` — optional starter log for tracking intentionally-disabled services.
 - `secrets.md` — SOPS/age rules and safe secret-handling patterns.
 - `releases.md` — version pinning and upgrade workflow.
 - `talos-kubernetes-upgrade.md` — step-by-step Talos/Kubernetes upgrade runbook.

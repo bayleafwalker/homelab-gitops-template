@@ -18,4 +18,4 @@ resources: []
 #  - vscode/ks.yaml                   # Browser workspace; depends on RWX storage.
 #  - custom-app/ks.yaml               # Stateless app pattern.
 #  - custom-app-postgres/ks.yaml      # Hand-written CNPG app pattern.
-#  - silverbullet/ks.yaml             # Placeholder app example.
+#  - silverbullet/ks.yaml             # Markdown notes/PKM web app; stateful (PVC), Gateway-routed.
