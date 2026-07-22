@@ -1,0 +1,48 @@
+{
+  "schema_version": "test-context/v1",
+  "id": "homelab-gitops-template.flux.desired-live-convergence",
+  "owner_repo": "homelab-gitops-template",
+  "subject": "renderable-flux-desired-state-template",
+  "contract_ref": {
+    "doc_id": "homelab-gitops-template.flux-desired-live-convergence",
+    "revision": "sha256:de9e9a02c849d22e6aa8c228a0819baeac44088905b4466bff765ec4ba149f91"
+  },
+  "source_of_truth": "git-template-clusters-main-kubernetes",
+  "depth": 0,
+  "backends": ["git", "kustomize"],
+  "actors": ["template-author", "template-adopter"],
+  "initial_state": ["template placeholders are not production credentials"],
+  "operations": [
+    {
+      "name": "build-default-reconciliation-tree",
+      "actors": ["template-author"],
+      "synchronization": "after-repository-checkout"
+    },
+    {
+      "name": "run-repository-consistency-checks",
+      "actors": ["template-author"],
+      "synchronization": "after-kustomize-build"
+    }
+  ],
+  "consistency": {
+    "target": "documented-only",
+    "object": "template-desired-state-tree"
+  },
+  "bounds": {
+    "live_cluster_observation": false,
+    "production_mutation": false
+  },
+  "invariants": [
+    "default-reconciliation-tree-renders",
+    "template-ci-does-not-claim-live-health",
+    "adopter-must-replace-template-identifiers"
+  ],
+  "faults": ["invalid-kustomize-reference", "unreplaced-template-placeholder"],
+  "oracles": ["kustomize-build", "repository-consistency-script"],
+  "implementation_anchors": [
+    "clusters/main/kubernetes/kustomization.yaml",
+    "scripts/check-repo.sh",
+    ".github/workflows/validate.yaml"
+  ],
+  "expansions": ["semantic-doc", "stateful-test"]
+}

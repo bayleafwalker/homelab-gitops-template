@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "repo_id": "homelab-gitops-template",
+  "adoption_level": "guidance-only",
+  "routing": {
+    "default_harness": "codex",
+    "default_model_alias": "fast-build",
+    "action_classes": {
+      "plan": { "enabled": true, "model_alias": "frontier-plan" },
+      "build": { "enabled": true, "model_alias": "fast-build", "review_required": true },
+      "review": { "enabled": true, "model_alias": "review-synthesis" },
+      "verify": { "enabled": true, "model_alias": "review-synthesis", "review_required": true },
+      "reconcile": { "enabled": true, "model_alias": "review-synthesis" }
+    }
+  },
+  "skills": {
+    "template_root": "/projects/dev/agentops/templates/dispatch/skills",
+    "selected": [
+      "dispatch-plan",
+      "dispatch-build",
+      "dispatch-review",
+      "code-change-verification",
+      "verify-state-protocols",
+      "reconcile-project-contracts"
+    ],
+    "overlays": [".agents/overlays/homelab-gitops-template.state-protocols.md"]
+  },
+  "scope": {
+    "allowed_path_roots": ["clusters/", "docs/", "scripts/", "verification/", ".agents/", ".github/"],
+    "out_of_scope": [
+      "plaintext secret values",
+      "live cluster mutation from template verification",
+      "claims that placeholder resources prove a deployed cluster healthy"
+    ]
+  },
+  "risk_surfaces": [
+    {
+      "id": "flux-desired-live-convergence",
+      "paths": ["clusters/main/kubernetes/**"],
+      "skills": ["verify-state-protocols", "reconcile-project-contracts"],
+      "context_ids": ["homelab-gitops-template.flux.desired-live-convergence"],
+      "default_depth": 0,
+      "required_on_change": true
+    }
+  ],
+  "verification": {
+    "command_families": ["kustomize", "secrets", "docs"],
+    "targeted_first": true,
+    "commands": [
+      "kustomize build clusters/main/kubernetes",
+      "./scripts/check-repo.sh",
+      "python /projects/dev/agentops/templates/dispatch/scripts/validate_verification_artifacts.py --root ."
+    ]
+  },
+  "hooks": {
+    "level": "verification",
+    "publishers": ["git", "dispatcher-gate"]
+  }
+}

@@ -18,6 +18,7 @@ better source of truth.
 - `secrets.md` — SOPS/age rules and safe secret-handling patterns.
 - `releases.md` — version pinning and upgrade workflow.
 - `talos-kubernetes-upgrade.md` — step-by-step Talos/Kubernetes upgrade runbook.
+- `protocols/flux-desired-live-convergence.md` — bounded template contract for renderable Git-owned desired state and adopter-owned live evidence.
 
 ## App configuration guides
 - `authentik-access.md` — access patterns and notes for Authentik.

@@ -171,6 +171,18 @@ kubectl get pods -n kube-system,cert-manager,longhorn-system,volsync
 | **Flux Reconciliation Failures** | Kustomization/HelmRelease not Ready | `flux logs --kind=<Kind> --name=<name>` | Check YAML syntax, variable substitution, secret decryption |
 | **Longhorn Volume Issues** | Volumes in detached/unknown state | `kubectl get volumes.longhorn.io -n longhorn-system` | Check Longhorn UI, worker node status, storage capacity |
 
+## Stateful protocol verification
+
+`homelab-gitops-template.dispatch.json` and
+`.agents/overlays/homelab-gitops-template.state-protocols.md` define the
+template's bounded GitOps verification contract. Template CI proves
+renderability and consistency only; it does not prove live cluster health.
+
+After copying this repository, rename the manifest and owner identifiers,
+replace the contract revision and implementation anchors, and add only the
+read-only live oracles the new environment can actually support. Repair and
+production mutation remain separately authorized.
+
 ## Key Files Reference
 
 - `README.md` — Quick start and stack overview
