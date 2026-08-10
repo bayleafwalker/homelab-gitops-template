@@ -140,45 +140,55 @@ This is typically required to roll out kubelet image changes (`machine.kubelet.i
 
 ### Longhorn instance-manager PDB blocks drain
 
-`talosctl upgrade` cordon-drains the node before rebooting. Longhorn's
-`instance-manager` pod has a PodDisruptionBudget that blocks eviction when
-doing so would leave a volume replica under its minimum count. The drain will
-loop indefinitely on the eviction until the context times out, exiting with:
+`talosctl upgrade` cordon-drains the node before rebooting. Longhorn's default
+`node-drain-policy` is `block-for-eviction-if-contains-last-replica`, so the
+`instance-manager` pod's PodDisruptionBudget deliberately blocks eviction while
+it still holds the *last* healthy replica of any volume, until Longhorn
+rebuilds that replica elsewhere. The drain retries the eviction every few
+seconds until the context times out, exiting with:
 
 ```
 error draining node "k8s-worker-N": error when evicting pods/"instance-manager-...":
 context deadline exceeded
 ```
 
-The installer has already written the new image and set `LoaderEntryDefault`
-before the drain starts, so the upgrade is not lost — only the drain and reboot
-steps remain.
+**That wait is correct behaviour, not a fault — do not delete the
+instance-manager to "unstick" it.** Deleting it defeats the exact protection
+the PDB exists to provide: if it's still holding a volume's only healthy
+replica, killing it drops that volume to zero healthy copies instead of
+letting the rebuild finish. The installer has already written the new image
+and set `LoaderEntryDefault` before the drain starts, so the upgrade itself
+is not lost while you wait — only the drain and reboot steps remain.
 
-**Resolution:**
+**First, tell a legitimate wait from a genuine deadlock — they look identical
+for the first minute or two,** both showing the same `evicting pod …` retry.
+Check whether it's progressing:
 
-1. Identify the stuck pod:
-   ```bash
-   kubectl get pod -n longhorn-system -o wide | grep instance-manager | grep <node>
-   ```
-2. Delete it (Longhorn will rebuild replicas on remaining nodes):
-   ```bash
-   kubectl delete pod -n longhorn-system <instance-manager-pod>
-   ```
-3. Check Longhorn volume health and wait for recovery:
-   ```bash
-   kubectl get volumes.longhorn.io -n longhorn-system \
-     -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.robustness}{"\n"}{end}' \
-     | grep -v "healthy\|unknown"
-   ```
-4. Reboot the node manually:
-   ```bash
-   talosctl reboot --nodes <node-ip>
-   ```
-5. Wait for Ready, then uncordon:
-   ```bash
-   kubectl wait --for=condition=Ready node/<node> --timeout=300s
-   kubectl uncordon <node>
-   ```
+```bash
+# volumes that still lack a healthy replica anywhere other than <node> —
+# this count must be falling, not static
+kubectl -n longhorn-system get volumes.longhorn.io \
+  -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.robustness}{"\n"}{end}' \
+  | grep -v "healthy"
+
+# replicas still running on the node being drained — this count must also fall
+kubectl -n longhorn-system get replicas.longhorn.io \
+  -o jsonpath='{range .items[*]}{.spec.nodeID}{" "}{.metadata.name}{"\n"}{end}' \
+  | grep '^<node> '
+```
+
+If both counts are falling, it's rebuilding — wait it out; the interval is
+throttled by `concurrent-replica-rebuild-per-node-limit` and can legitimately
+take well past a short drain timeout on a node with many volumes.
+
+If the "lacking a healthy replica elsewhere" count is already `0` **and** the
+blocked pod set isn't shrinking, the drain cannot succeed on its own — the
+instance-manager is blocked by something else with no failover target (for
+example another PodDisruptionBudget-protected workload pinned to the same
+node with no replica or standby elsewhere). Deleting the instance-manager
+still isn't the fix here: find and resolve that other blocker (move or scale
+the conflicting workload off the node, or provision a failover target for it)
+and let the drain re-evaluate, rather than removing the protection.
 
 ### EFI Boot entry with trailing null bytes (malformed device path)
 
