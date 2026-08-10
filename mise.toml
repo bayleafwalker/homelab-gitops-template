@@ -74,6 +74,10 @@ run = "./scripts/quickstart.sh"
 description = "Show starter configuration script options."
 run = "./scripts/configure-starter.sh --help"
 
+[tasks.iscsi-preflight]
+description = "Check for open-iscsi node records incompatible with the target Talos version before upgrading (see docs/talos-kubernetes-upgrade.md)."
+run = "./scripts/iscsi-record-preflight.sh"
+
 [tasks.preflight]
 description = "Run validation and confirm live-cluster context."
 depends = ["validate", "context"]

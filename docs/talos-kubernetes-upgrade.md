@@ -39,6 +39,47 @@ The SUC Plans are already configured to be safe-by-default:
 - SUC plans are present:
   - `direnv exec . kubectl -n system-upgrade get plan -o wide`
 
+### iSCSI node-record preflight — for iSCSI-backed storage (e.g. Longhorn)
+
+```bash
+mise run iscsi-preflight        # must not print BLOCKED
+```
+
+Talos ships open-iscsi via an extension image, and different open-iscsi
+releases have, in practice, renamed persisted node-record parameters between
+point releases. Neither side of such a rename parses the other's records, and
+`iscsiadm -m node` parses the **whole** node database in one pass — so **one
+incompatible record can break every iSCSI volume attach on that node**, not
+just the volume that wrote it.
+
+Three properties make this worse than it first looks:
+
+- `/var/lib/iscsi` is host state that **survives both upgrade and rollback**,
+  so rolling back does not undo it.
+- The extension's own version string is not a reliable signal — it is possible
+  for it to stay the same across a schematic bump while the embedded
+  open-iscsi payload changes underneath it. Don't trust `talosctl get
+  extensions` to tell you which side of a boundary a node is on.
+- It is **per-node persistent state, not a release-wide regression**: a canary
+  node upgrading cleanly proves nothing about the others, because each node
+  carries its own copy of `/var/lib/iscsi`.
+
+The script ships with **no known version mapping configured** — it fails
+closed (`UNDETERMINED`) rather than silently passing an unrecognised boundary.
+Open `scripts/iscsi-record-preflight.sh` and fill in `talos_to_iscsi()` for
+your own schematic before relying on this; the comment above that function
+explains how to work out your own mapping.
+
+**Clearing a BLOCKED node:** drain its storage workloads, then re-run the
+preflight to verify both the node-record database and active sessions are
+empty — don't assume workload eviction guarantees deletion of every historical
+node record; that verification is what this script is for. Quarantining
+records by hand (moving them aside, confirming `iscsiadm -m node` then exits
+0, and only then upgrading) is the fallback for a node that will not detach
+cleanly or crashed mid-drain, not the normal procedure — and it should stay a
+manual, deliberate step rather than something scripted, since deleting a
+record whose session is still serving a mounted filesystem can lose the mount.
+
 ## One-by-one upgrade procedure
 
 SUC is configured for one-at-a-time, but it doesn’t guarantee *which* eligible node goes next.
