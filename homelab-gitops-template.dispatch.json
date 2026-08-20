@@ -54,6 +54,6 @@
   },
   "hooks": {
     "level": "verification",
-    "publishers": ["git", "dispatcher-gate"]
+    "publishers": ["git"]
   }
 }
