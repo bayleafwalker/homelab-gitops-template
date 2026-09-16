@@ -14,7 +14,7 @@
     }
   },
   "skills": {
-    "template_root": "/projects/dev/agentops/templates/dispatch/skills",
+    "template_root": "/projects/dev/agentops/skills",
     "selected": [
       "dispatch-plan",
       "dispatch-build",
@@ -49,7 +49,7 @@
     "commands": [
       "kustomize build clusters/main/kubernetes",
       "./scripts/check-repo.sh",
-      "python /projects/dev/agentops/templates/dispatch/scripts/validate_verification_artifacts.py --root ."
+      "python /projects/dev/agentops/scripts/validate_verification_artifacts.py --root ."
     ]
   },
   "hooks": {
