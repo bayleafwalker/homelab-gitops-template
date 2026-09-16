@@ -71,5 +71,5 @@ jobs:
 
       - name: Validate dispatch and verification contracts
         run: >-
-          python3 .agentops-contracts/templates/dispatch/scripts/validate_verification_artifacts.py
+          python3 .agentops-contracts/scripts/validate_verification_artifacts.py
           --root .
